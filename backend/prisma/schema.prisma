@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  password   String
+  name       String
+  avatarUrl  String?
+  googleId   String?
+  createdAt  DateTime @default(now())
+
+  projectsOwned Project[]       @relation("ProjectOwner")
+  memberships   ProjectMember[]
+  messages      ProjectMessage[]
+}
+
+model Project {
+  id            String   @id @default(uuid())
+  name          String
+  description   String?
+  ownerId       String
+  createdAt     DateTime @default(now())
+  notionDbId    String?
+  notionSchema  Json?
+  githubRepoUrl String?
+  zoomMeetingId String?
+
+  owner      User            @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members    ProjectMember[]
+  messages   ProjectMessage[]
+  meetings   MeetingLog[]
+  branches   GithubBranchLink[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  userId    String
+  projectId String
+  role      String
+  joinedAt  DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, projectId])
+}
+
+model ProjectMessage {
+  id        String   @id @default(uuid())
+  projectId String
+  senderId  String
+  content   String
+  iv        String
+  isSystem  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+  sender  User    @relation(fields: [senderId], references: [id])
+}
+
+model MeetingLog {
+  id            String   @id @default(uuid())
+  projectId     String
+  zoomMeetingId String
+  topic         String?
+  recordingUrl  String?
+  transcriptVtt String?
+  aiSummary     String?
+  actionItems   Json?
+  status        String?
+  createdAt     DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id])
+}
+
+model GithubBranchLink {
+  id           String   @id @default(uuid())
+  projectId    String
+  branchName   String
+  notionTaskId String?
+  prUrl        String?
+  status       String?
+  updatedAt    DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id])
+}
