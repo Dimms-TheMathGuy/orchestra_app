@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Client } from '@notionhq/client';
+import { Client, GetDatabaseResponse } from '@notionhq/client';
 
 @Injectable()
 export class NotionService {
@@ -8,26 +8,48 @@ export class NotionService {
     // initialize notion SDK client : this creates a live Notion SDK client. if success, it's ready to make API calls
     private notionClient: Client;
 
-    constructor(private configService : ConfigService) {
+    constructor(private configService: ConfigService) {
         this.notionClient = new Client({
-            auth: this.configService.get<string>('NOTION_API_KEY'),  
+            auth: this.configService.get<string>('NOTION_API_KEY'),
         });
     }
 
-    async getDatabaseSchema(databaseId:string) {
-        try{
-            const databaseSchema = await this.notionClient.databases.retrieve({database_id: databaseId});
-            return databaseSchema; 
-        }catch (error){
-            throw new Error('failed to read the schema of the template');
-        }   
+    async fetchAllDatabaseSchema(databaseIds: string[]) {
+        let schemas: GetDatabaseResponse[] = [];  // the type of var must be suitable with the return type of the method called
+
+        try {
+            for (const id of databaseIds) {
+                const schema = await this.notionClient.databases.retrieve({ database_id: id });
+                schemas.push(schema);
+            }
+        } catch (error) {
+            throw new NotFoundException(' Invalid Database ID : Database Not Found');
+        }
+
+        return schemas;
     }
 
-    async createPage(databaseId:string, properties:any){
-        try{
-            await this.notionClient.pages.create({parent : {database_id: databaseId}, properties: properties});
-        }catch(error){
-            throw new Error('failed to generate notion content');
+    async fetchBlockChildren(blockId: string) {
+        let databaseIds: string[] = [];
+        try {
+            const response = await this.notionClient.blocks.children.list({ block_id: blockId });
+            const dbBlocks = response.results.filter((x) => 'type' in x && x.type === "child_database"); // Check that 'type' exists on the object before comparing its value, cause the response can be PartialBlockObjectResponse that has no 'type'
+            const ids = dbBlocks.map((x) => x.id);
+            databaseIds.push(...ids);
+        } catch (error) {
+            throw new NotFoundException('Invalid Block ID : Page Not Found');
+        }
+
+        const schemas = await this.fetchAllDatabaseSchema(databaseIds);
+
+        return schemas;
+    }
+
+    async createPage(databaseId: string, properties: any) {
+        try {
+            await this.notionClient.pages.create({ parent: { database_id: databaseId }, properties: properties });
+        } catch (error) {
+            throw new BadRequestException('Invalid JSON');
         }
     }
 
