@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, BadRequestException } from '@nestjs/common';
 import { NotionService } from './notion.service';
+import { createPageSchema } from './dto/create-page.dto';
+
 
 @Controller('notion')
 // all routes start with /notion
@@ -15,8 +17,13 @@ export class NotionController {
 
     @Post()
     //POST /notion
-    async createPage(@Body('databaseId') databaseId: string, @Body('properties') properties: any) {
+    async createPage(@Body() body: unknown) {
         // @Body extracts the JSON body from the request
-        return this.notionService.createPage(databaseId, properties);
+        try{
+            const validated = createPageSchema.parse(body);
+            return this.notionService.createPage(validated.databaseId, validated.properties);
+        }catch(error){
+            throw new BadRequestException(error.errors);
+        }
     }
 }

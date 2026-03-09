@@ -48,8 +48,9 @@ export class NotionService {
     async createPage(databaseId: string, properties: any) {
         try {
             await this.notionClient.pages.create({ parent: { database_id: databaseId }, properties: properties });
-        } catch (error) {
-            throw new BadRequestException('Invalid JSON');
+        } catch (error: any) {
+            console.error(error); // This will print Notion's actual complaint to Nest.js server terminal
+            throw new BadRequestException(error.message || 'Failed to create page in Notion');
         }
     }
 
