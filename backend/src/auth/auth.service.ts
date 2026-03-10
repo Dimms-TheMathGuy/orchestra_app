@@ -29,4 +29,30 @@ export class AuthService {
       access_token: this.jwtService.sign({ sub: user.id }),
     };
   }
+
+  async register(email: string, password: string, name: string) {
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      throw new Error("Email already registered");
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        email,
+        password: hashedPassword,
+        name,
+      },
+    });
+
+    return {
+      message: "User registered successfully",
+      userId: user.id,
+    };
+  }
 }
