@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class TranscriptsService {
-    private transcripts = []
+    private transcripts: any[] = []
 
     upload(meetingId: number, text: string) {
         const transcript = {

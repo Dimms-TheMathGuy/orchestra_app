@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common'
 import { GeminiService } from '../gemini/gemini.service'
-import { TranscriptsService } from '../transcripts/transcripts.service'
+import { TranscriptsService } from '../transcript/transcripts.service'
 
 @Injectable()
 export class SummariesService {
 
-    private summaries = []
+    private summaries: any[] = []
 
     constructor(
         private gemini: GeminiService,

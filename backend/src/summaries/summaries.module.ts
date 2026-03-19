@@ -3,7 +3,7 @@ import { SummariesController } from './summaries.controller'
 import { SummariesService } from './summaries.service'
 
 import { GeminiModule } from '../gemini/gemini.module'
-import { TranscriptsModule } from '../transcripts/transcripts.module'
+import { TranscriptsModule } from '../transcript/transcripts.module'
 
 @Module({
     imports: [

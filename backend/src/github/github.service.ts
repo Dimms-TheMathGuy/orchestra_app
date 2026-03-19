@@ -14,7 +14,7 @@ export class GithubService {
       'https://api.github.com/user/repos',
       {
         headers: {
-          Authorization: `Bearer YOUR_GITHUB_TOKEN`
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
         }
       }
     );
@@ -24,7 +24,7 @@ export class GithubService {
 
   constructor(private prisma: PrismaService) {}
 
-  async linkRepository(repo: any, projectId: number) {
+  async linkRepository(projectId: string, repo: any) {
     return this.prisma.projectRepository.create({
       data: {
         projectId: String(projectId),
@@ -43,9 +43,23 @@ export class GithubService {
     ];
   }
 
-  sync() {
-    // Later: fetch GitHub data → save to DB
-    return { message: 'Sync started (service)' };
+  async sync() {
+    const repos = await this.prisma.projectRepository.findMany()
+
+    for (const repo of repos) {
+      const response = await axios.get(
+        `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+          }
+        }
+      )
+
+      console.log(response.data)
+    }
+
+    return { message: 'Sync complete' }
   }
 
 }

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common'
 
 @Injectable()
 export class MeetingsService {
-    private meetings = []
+    private meetings: any[] = []
     create(meeting) {
         const newMeeting = {
             id: Date.now(),

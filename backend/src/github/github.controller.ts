@@ -1,4 +1,4 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { GithubService } from './github.service';
 
 @Controller('api/github')
@@ -13,28 +13,15 @@ export class GithubController {
 
   @Get('repos')
   getRepos() {
-    return [
-      {
-        id: 1,
-        name: "pm-system",
-        owner: "your-username",
-        private: false
-      },
-      {
-        id: 2,
-        name: "mobile-app",
-        owner: "your-username",
-        private: true
-      }
-    ];
+    return this.githubService.getRepos();
   }
 
   @Post('repos/link')
-  async linkRepo(body) {
+  linkRepo(@Body() body) {
     return this.githubService.linkRepository(
       body.projectId,
       body.repo
-    );
+    )
   }
 
   @Get('activities')
