@@ -4,7 +4,7 @@ import { MeetingsService } from './meetings.service'
 
 @Controller('meetings')
 export class MeetingsController {
-    constructor(private meetingsService: MeetingService) { }
+    constructor(private meetingsService: MeetingsService) { }
 
     @Get()
     findAll() {

@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/users.module';
 import { NotionModule } from './notion/notion.module';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotionModule } from './notion/notion.module';
     AuthModule,
     UserModule,
     NotionModule,
+    GithubModule, 
   ],
   controllers: [AppController],
   providers: [AppService],
