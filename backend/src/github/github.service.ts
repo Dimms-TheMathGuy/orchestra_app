@@ -44,19 +44,46 @@ export class GithubService {
   }
 
   async sync() {
-    const repos = await this.prisma.projectRepository.findMany()
+    const repos = await this.prisma.projectRepository.findMany({
+      include: { project: true }
+    })
 
     for (const repo of repos) {
       const response = await axios.get(
         `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits`,
         {
           headers: {
-            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`
+            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            Accept: 'application/vnd.github+json'
           }
         }
       )
 
-      console.log(response.data)
+      const commits = response.data
+
+      for (const commit of commits) {
+        await this.prisma.githubActivity.upsert({
+          where: {
+            repoId_githubId_type: {
+              repoId: repo.id,
+              githubId: commit.sha,
+              type: 'commit'
+            }
+          },
+          update: {},
+          create: {
+            projectId: repo.projectId,
+            repoId: repo.id,
+            type: 'commit',
+            githubId: commit.sha,
+            title: commit.commit.message.split('\n')[0],
+            description: commit.commit.message,
+            author: commit.commit.author.name,
+            url: commit.html_url,
+            createdAt: new Date(commit.commit.author.date)
+          }
+        })
+      }
     }
 
     return { message: 'Sync complete' }

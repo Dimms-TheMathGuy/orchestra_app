@@ -130,4 +130,6 @@ model GithubActivity {
 
   project Project            @relation(fields: [projectId], references: [id])
   repo    ProjectRepository  @relation(fields: [repoId], references: [id])
+
+  @@unique([repoId, githubId, type])
 }
