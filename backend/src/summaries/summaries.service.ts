@@ -1,42 +1,50 @@
 import { Injectable } from '@nestjs/common'
-import { GeminiService } from '../gemini/gemini.service'
-import { TranscriptsService } from '../transcripts/transcripts.service'
+import { GeminiService } from 'src/gemini/gemini.service'
+import { TranscriptsService } from 'src/transcript/transcripts.service'
+import { NotionService } from 'src/notion/notion.service'
+
+type Summary = {
+    id: number;
+    meetingId: number;
+    content: string;
+};
 
 @Injectable()
 export class SummariesService {
 
-    private summaries = []
+    private summaries: Summary[] = [];
 
     constructor(
         private gemini: GeminiService,
-        private transcripts: TranscriptsService
-    ) { }
+        private transcripts: TranscriptsService,
+        private notion: NotionService
+    ) { };
 
-    async generate(meetingId: number) {
+    async generate(meetingId: number, blockId: string) {
 
-        const transcript = this.transcripts.findByMeeting(meetingId)
-
+        const transcript = this.transcripts.findByMeeting(meetingId);
         if (!transcript) {
             return { error: "Transcript not found" }
         }
 
-        const summaryText = await this.gemini.summarize(transcript.text)
+        const SchemaContext = await this.notion.fetchBlockChildren(blockId);
+
+        const summaryText = await this.gemini.summarize(transcript.text, SchemaContext);
 
         const summary = {
             id: Date.now(),
             meetingId,
-            summary: summaryText
+            content: summaryText
         }
 
-        this.summaries.push(summary)
+        this.summaries.push(summary);
 
-        return summary
-
+        return summary;
     }
 
     findByMeeting(meetingId: number) {
 
-        return this.summaries.find(s => s.meetingId === meetingId)
+        return this.summaries.find((s) => s.meetingId === meetingId);
 
     }
 
