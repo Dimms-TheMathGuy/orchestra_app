@@ -37,10 +37,7 @@ export class GithubService {
   }
 
   async getActivities(projectId: string) {
-    return this.prisma.githubActivity.findMany({
-      where: { projectId },
-      orderBy: { createdAt: 'desc' }
-    });
+    return this.prisma.githubActivity.findMany();
   }
 
   async sync() {
