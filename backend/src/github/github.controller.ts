@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { GithubService } from './github.service';
 
 @Controller('api/github')
@@ -24,9 +24,9 @@ export class GithubController {
     )
   }
 
-  @Get('activities')
-  getActivities() {
-    return this.githubService.getActivities();
+  @Get(':id/github-activity')
+  getActivities(@Param('id') id: string) {
+    return this.githubService.getActivities(id);
   }
 
   @Post('sync')

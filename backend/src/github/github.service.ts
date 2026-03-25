@@ -36,11 +36,8 @@ export class GithubService {
     });
   }
 
-  getActivities() {
-    // Later: fetch from DB
-    return [
-      { type: 'commit', message: 'Initial commit' }
-    ];
+  async getActivities(projectId: string) {
+    return this.prisma.githubActivity.findMany();
   }
 
   async sync() {
