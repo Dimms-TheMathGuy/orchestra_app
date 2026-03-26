@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
 
 type Activity = {
   id: string;
@@ -18,6 +19,14 @@ export default function GithubActivityWidget({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const socket: Socket = io("http://localhost:3000");
+
+    socket.emit("joinProject", projectId);
+
+    socket.on("newActivity", (activity: Activity) => {
+      setActivities((prev) => [activity, ...prev]);
+    });
+
     fetch(`http://localhost:3000/api/github/${projectId}/github-activity`)
       .then((res) => res.json())
       .then((data) => {
@@ -28,6 +37,10 @@ export default function GithubActivityWidget({
         console.error("Failed to fetch GitHub activities:", err);
         setLoading(false);
       });
+
+    return () => {
+      socket.disconnect();
+    };
   }, [projectId]);
 
   return (

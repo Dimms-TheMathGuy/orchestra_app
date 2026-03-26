@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/users.module';
 import { NotionModule } from './notion/notion.module';
 import { GithubModule } from './github/github.module';
+import { ActivityGateway } from './activity/activity.gateway';
 
 @Module({
   imports: [
@@ -22,6 +23,6 @@ import { GithubModule } from './github/github.module';
     GithubModule, 
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, ActivityGateway],
 })
 export class AppModule {}
