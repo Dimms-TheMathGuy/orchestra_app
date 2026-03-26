@@ -4,11 +4,13 @@ import { SummariesService } from './summaries.service'
 
 import { GeminiModule } from '../gemini/gemini.module'
 import { TranscriptsModule } from '../transcript/transcripts.module'
+import { NotionModule } from 'src/notion/notion.module'
 
 @Module({
     imports: [
         GeminiModule,
-        TranscriptsModule
+        TranscriptsModule,
+        NotionModule
     ],
     controllers: [SummariesController],
     providers: [SummariesService]

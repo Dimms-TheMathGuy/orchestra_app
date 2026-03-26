@@ -39,6 +39,8 @@
     "prisma": "^5.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "zod": "^4.3.6",
+    "@google/generative-ai": "^0.1.0"
     "socket.io": "^4.8.3",
     "zod": "^4.3.6"
   },
@@ -79,6 +81,9 @@
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
+    },
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
     },
     "collectCoverageFrom": [
       "**/*.(t|j)s"
