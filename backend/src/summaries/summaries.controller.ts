@@ -28,7 +28,7 @@ export class SummariesController {
             const validated = updateDraftSchema.parse(body);
             return this.summaries.updateDraft(Number(id), draftId, validated.entries)
         } catch (error: any) {
-            throw new BadRequestException(error.errors)
+            throw new BadRequestException(error.issues ?? error.errors ?? error.message)
         }
 
     }
