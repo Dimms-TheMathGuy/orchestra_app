@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Param, Headers } from '@nestjs/common';
 import { GithubService } from './github.service';
 import type { Request } from 'express';
 
@@ -13,21 +13,31 @@ export class GithubController {
   }
 
   @Get('repos')
-  getRepos() {
-    return this.githubService.getRepos();
+  getRepos(@Req() req: Request) {
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return { error: 'User not authenticated' };
+    }
+
+    return this.githubService.getUserRepos(userId);
   }
 
-  @Post('repos/link')
-  linkRepo(@Body() body) {
+  @Post(':projectId/repository')
+  linkRepo(
+    @Param('projectId') projectId: string, @Body() repo: any, @Req() req: any) {
+    const userId = req.user.id; 
+
     return this.githubService.linkRepository(
-      body.projectId,
-      body.repo
-    )
+      projectId,
+      repo,
+      userId
+    );
   }
 
-  @Get(':id/github-activity')
-  getActivities(@Param('id') id: string) {
-    return this.githubService.getActivities(id);
+  @Get('projects/:projectId/github-activity')
+  getActivities(@Param('projectId') projectId: string) {
+    return this.githubService.getActivities(projectId);
   }
 
   @Post('sync')
@@ -35,9 +45,13 @@ export class GithubController {
     return this.githubService.sync();
   }
 
-  @Post('webhook/github')
-  handleWebhook(@Body() payload: any) {
-    console.log(payload);
+  @Post('webhook')
+  async handleWebhook(@Body() payload: any, @Headers() headers: any) {
+    const event = headers['x-github-event'];
+
+    await this.githubService.processEvent(event, payload);
+
+    return { ok: true };
   }
 
   @Get('github/status')
