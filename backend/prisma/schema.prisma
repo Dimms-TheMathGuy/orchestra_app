@@ -22,9 +22,12 @@ model User {
   googleId   String?
   createdAt  DateTime @default(now())
 
-  projectsOwned Project[]       @relation("ProjectOwner")
-  memberships   ProjectMember[]
-  messages      ProjectMessage[]
+  projectsOwned    Project[]       @relation("ProjectOwner")
+  memberships      ProjectMember[]
+  messages         ProjectMessage[]
+  githubId         String? @unique
+  githubUsername   String?
+  githubToken      String?
 }
 
 model Project {
@@ -35,14 +38,15 @@ model Project {
   createdAt     DateTime @default(now())
   notionDbId    String?
   notionSchema  Json?
-  githubRepoUrl String?
   zoomMeetingId String?
 
-  owner      User            @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members    ProjectMember[]
-  messages   ProjectMessage[]
-  meetings   MeetingLog[]
-  branches   GithubBranchLink[]
+  owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members      ProjectMember[]
+  messages     ProjectMessage[]
+  meetings     MeetingLog[]
+  repositories ProjectRepository[]
+  branches     GithubBranchLink[]
+  activities   GithubActivity[]
 }
 
 model ProjectMember {
@@ -86,14 +90,49 @@ model MeetingLog {
   project Project @relation(fields: [projectId], references: [id])
 }
 
+model ProjectRepository {
+  id            String   @id @default(uuid())
+  projectId     String
+  githubOwner   String
+  githubRepo    String
+  githubUrl     String
+  webhookSecret String?
+  createdAt     DateTime @default(now())
+
+  project   Project            @relation(fields: [projectId], references: [id])
+  branches  GithubBranchLink[]
+  activities GithubActivity[]   
+}
+
 model GithubBranchLink {
   id           String   @id @default(uuid())
   projectId    String
+  repoId       String 
   branchName   String
   notionTaskId String?
+  prNumber     Int? 
   prUrl        String?
   status       String?
   updatedAt    DateTime @updatedAt
 
-  project Project @relation(fields: [projectId], references: [id])
+  project Project            @relation(fields: [projectId], references: [id])
+  repo    ProjectRepository  @relation(fields: [repoId], references: [id])
+}
+
+model GithubActivity {
+  id          String   @id @default(uuid())
+  projectId   String
+  repoId      String
+  type        String      // commit/pr/issue/ merge
+  githubId    String?     // commit SHA /PR ID/issue ID
+  title       String
+  description String?
+  author      String
+  url         String
+  createdAt   DateTime
+
+  project Project            @relation(fields: [projectId], references: [id])
+  repo    ProjectRepository  @relation(fields: [repoId], references: [id])
+
+  @@unique([repoId, githubId, type])
 }
