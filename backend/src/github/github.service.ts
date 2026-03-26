@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Req } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
+import type { Response, Request } from 'express';
 
 @Injectable()
 export class GithubService {
@@ -84,6 +85,23 @@ export class GithubService {
     }
 
     return { message: 'Sync complete' }
+  }
+
+  async githubStatus(@Req() req: Request) {
+    const userId = (req as any).user.id;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        githubId: true,
+        githubUsername: true,
+      },
+    });
+
+    return {
+      connected: !!user?.githubId,
+      username: user?.githubUsername ?? null,
+    };
   }
 
 }

@@ -22,9 +22,12 @@ model User {
   googleId   String?
   createdAt  DateTime @default(now())
 
-  projectsOwned Project[]       @relation("ProjectOwner")
-  memberships   ProjectMember[]
-  messages      ProjectMessage[]
+  projectsOwned    Project[]       @relation("ProjectOwner")
+  memberships      ProjectMember[]
+  messages         ProjectMessage[]
+  githubId         String? @unique
+  githubUsername   String?
+  githubToken      String?
 }
 
 model Project {

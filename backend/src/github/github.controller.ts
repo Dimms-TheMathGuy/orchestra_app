@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Param } from '@nestjs/common';
 import { GithubService } from './github.service';
+import type { Request } from 'express';
 
 @Controller('api/github')
 export class GithubController {
@@ -32,6 +33,16 @@ export class GithubController {
   @Post('sync')
   sync() {
     return this.githubService.sync();
+  }
+
+  @Post('webhook/github')
+  handleWebhook(@Body() payload: any) {
+    console.log(payload);
+  }
+
+  @Get('github/status')
+  async githubStatus(@Req() req: Request) {
+    return this.githubService.githubStatus(req);
   }
 
 }
