@@ -64,7 +64,7 @@ ${JSON.stringify(schemaContext, null, 2)}
 
 Transcript:
 ${text}
-`
+`               // end of prompt
 
         const result = await model.generateContent(prompt)
         const rawResponse = result.response.text().trim()
