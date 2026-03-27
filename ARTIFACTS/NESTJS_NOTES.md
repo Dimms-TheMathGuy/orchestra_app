@@ -84,3 +84,30 @@ with `jest.fn()` mocks so the test can focus only on draft workflow behavior.
 - Accidentally testing the mock setup instead of real service behavior
 - Forgetting to assert important dependency calls
 - Pulling in the full app module for a small unit test
+
+## Module Imports for Dependency Injection
+
+### What it is
+When a service in one Nest module depends on a provider from another module, the provider's module must export it and the consuming module must import that module.
+
+### Why it matters
+Without the correct module import/export wiring, Nest cannot construct the dependent service at runtime.
+
+### When to use it
+Use this whenever a service starts injecting another module's service, such as `GithubService` needing `NotionService`.
+
+### How it appears in this project
+`GithubModule` needs `NotionModule` in its `imports` so `GithubService` can inject `NotionService`.
+
+### Example / Syntax Sketch
+```ts
+@Module({
+  imports: [PrismaModule, NotionModule],
+  providers: [GithubService],
+})
+```
+
+### Common mistakes
+- Injecting a service without importing its module
+- Forgetting to export the provider from the source module
+- Assuming class imports alone are enough for Nest DI

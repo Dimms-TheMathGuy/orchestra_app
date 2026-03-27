@@ -75,3 +75,11 @@ if ('error' in result) {
 ```
 - This pattern helps TypeScript narrow a union based on whether a property exists.
 - Useful when one function may return either success data or an error-shaped object.
+
+## `new Date()` vs `Date.now()`
+```ts
+lastSyncedAt: new Date()
+```
+- `new Date()` creates a `Date` object.
+- `Date.now()` returns a number timestamp.
+- For Prisma `DateTime` fields, you usually want `new Date()`, not `Date.now()`.

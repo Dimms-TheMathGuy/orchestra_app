@@ -74,3 +74,27 @@ expect(service.findByMeeting(55)?.drafts[1].status).toBe('pending');
 - Testing only the happy path
 - Verifying output shape but not side effects
 - Assuming build success means business logic is safe
+
+## Approval Signal vs Final State
+
+### What it is
+Separating "someone approved this change" from "this change is now complete in the system".
+
+### Why it matters
+Approval is not the same as integration. A PR can be approved and still remain open, change again, or close without merge.
+
+### When to use it
+Use this when a workflow has multiple events that look positive, but only one of them is the true completion event.
+
+### How it appears in this project
+For GitHub -> Notion sync, `pull_request_review` approval is only a signal. The task should reach `DONE` only after the PR is merged into the configured `targetBranch`.
+
+### Example / Syntax Sketch
+```ts
+approved !== merged
+```
+
+### Common mistakes
+- Treating review approval as if code is already shipped
+- Triggering downstream completion too early
+- Forgetting that final state may depend on multiple events

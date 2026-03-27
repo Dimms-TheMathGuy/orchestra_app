@@ -1,9 +1,10 @@
-import { Injectable, Req } from '@nestjs/common';
+import { Injectable, ParseEnumPipe, Req } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
 import crypto from 'crypto';
 import type { Response, Request } from 'express';
 import { ActivityGateway } from 'src/activity/activity.gateway';
+import { NotionService } from 'src/notion/notion.service';
 
 @Injectable()
 export class GithubService {
@@ -12,7 +13,7 @@ export class GithubService {
     return { message: 'GitHub connected (service)' };
   }
 
-  constructor(private prisma: PrismaService, private gateway: ActivityGateway) {}
+  constructor(private prisma: PrismaService, private gateway: ActivityGateway, private notion: NotionService) {}
 
   async linkRepository(projectId: string, repo: any, userId: string) {
 
@@ -31,7 +32,7 @@ export class GithubService {
       {
         name: 'web',
         active: true,
-        events: ['push', 'pull_request', 'issues', 'issue_comment'],
+        events: ['push', 'pull_request', 'issues', 'issue_comment', 'pull_request_review'],
         config: {
           url: 'https://your-domain.com/github/webhook',
           content_type: 'json',
@@ -51,7 +52,7 @@ export class GithubService {
         githubOwner: repo.owner.login,
         githubRepo: repo.name,
         githubUrl: repo.html_url,
-        webhookSecret: null
+        webhookSecret: secret
       }
     });
   }
@@ -156,6 +157,12 @@ export class GithubService {
       case 'issues':
         return this.handleIssue(payload);
 
+      case 'pull_request_review':
+        return this.handlePullRequestReview(payload);
+      
+      case 'issue_comment':
+        return;
+  
       default:
         console.log('Unhandled event:', event);
     }
@@ -231,6 +238,76 @@ export class GithubService {
         activity.projectId,
         activity
       );
+
+      const branchName = pr.head.ref;
+      const baseBranch = pr.base.ref;
+      const action = payload.action.toLowerCase();
+      const merged = pr.merged;
+
+    // part untuk taskBranchSync
+    const linkedTask = await this.prisma.taskBranchSync.findUnique({
+      where: {
+              repoId_branchName: {
+                repoId: projectRepo.id,
+                branchName: branchName,
+              },
+            }
+          })
+    
+    if(!linkedTask) return;
+
+    if(action === 'opened' || action === 'reopened' || action === 'ready_for_review'){
+      
+      await this.prisma.taskBranchSync.update({
+        where: {
+          id: linkedTask.id
+        },
+        data: {
+          prNumber: pr.number,
+          syncState: 'IN_REVIEW',
+          lastSyncedAt: new Date(),
+        }
+      })
+      return;
+    }
+    
+    if(action === 'closed'){
+      if(merged === true && baseBranch === linkedTask.targetBranch){
+
+        const prState = payload.review.state.toLowerCase();
+        
+        if(prState != 'approved') return;
+
+        await this.prisma.taskBranchSync.update({
+        where: {
+          id: linkedTask.id
+        },
+        data: {
+          prNumber: pr.number,
+          syncState: 'DONE',
+          lastSyncedAt: new Date(),
+          }
+        })
+
+        return;
+      }
+
+      if(merged === false){
+        await this.prisma.taskBranchSync.update({
+        where: {
+          id: linkedTask.id
+        },
+        data: {
+          prNumber: pr.number,
+          syncState: 'IN_PROGRESS',
+          lastSyncedAt: new Date(),
+          }
+        })
+
+        return;
+      }
+    }
+    return;
   }
 
   async handleIssue(payload: any) {
@@ -266,4 +343,86 @@ export class GithubService {
         activity
       );
   }
+
+  async linkTaskToBranch(projectId: string, repoId: string, taskId: string, branchName: string, targetBranch: string, DatabaseId: string) {
+
+    const LinkedTask = await this.prisma.taskBranchSync.create({
+      data: {
+        projectId: projectId,
+        repoId: repoId,
+        notionTaskPageId: taskId,
+        notionDatabaseId: DatabaseId,
+        branchName: branchName,
+        targetBranch: targetBranch,
+        syncState: 'LINKED', // untuk MVP gapapa defaultnya linked, tapi nanti untuk production dia harus bisa baca current state branch dari github API
+      }
+    })
+
+    return LinkedTask;
+  }
+
+  async findTaskBranchSync(repoId: string, branchName: string) {
+
+    const found = await this.prisma.taskBranchSync.findUnique({
+      where: {
+        repoId_branchName: {
+          repoId: repoId,
+          branchName: branchName
+        },
+      }
+    })
+
+    return found;
+  }
+
+  async handlePullRequestReview(payload: any) {
+    const repo = payload.repository;
+    const pr = payload.pull_request;
+    const review = payload.review;
+
+    const prState = review.state.toLowerCase();
+
+      if (prState === 'approved'){
+
+        // update DB
+        const projectRepo =
+        await this.prisma.projectRepository.findFirst({
+          where: {
+            githubOwner: repo.owner.login,
+            githubRepo: repo.name,
+          },
+        });
+
+        if (!projectRepo) return; 
+
+        const branchName = pr.head.ref;
+        const repoId = projectRepo.id;
+
+        const linkedTask = 
+        await this.prisma.taskBranchSync.findUnique({
+          where: {
+              repoId_branchName: {
+                repoId: repoId,
+                branchName: branchName,
+              },
+            }
+        });
+
+        if(!linkedTask) return;
+
+        await this.prisma.taskBranchSync.update({
+          where: {
+            id: linkedTask.id,
+          },
+          data: {
+            prNumber: pr.number,
+            lastSyncedAt: new Date(),
+          },
+        })
+      }
+  }
+
+
+  
+  
 }

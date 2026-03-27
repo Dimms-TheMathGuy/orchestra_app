@@ -47,6 +47,7 @@ model Project {
   repositories ProjectRepository[]
   branches     GithubBranchLink[]
   activities   GithubActivity[]
+  taskBranchSyncs TaskBranchSync[]
 }
 
 model ProjectMember {
@@ -102,6 +103,7 @@ model ProjectRepository {
   project   Project            @relation(fields: [projectId], references: [id])
   branches  GithubBranchLink[]
   activities GithubActivity[]   
+  taskBranchSyncs TaskBranchSync[]
 }
 
 model GithubBranchLink {
@@ -135,4 +137,34 @@ model GithubActivity {
   repo    ProjectRepository  @relation(fields: [repoId], references: [id])
 
   @@unique([repoId, githubId, type])
+}
+
+enum SyncState {
+  LINKED
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
+}
+
+model TaskBranchSync {
+  id          String  @id @default(uuid())
+  projectId   String
+  notionTaskPageId  String 
+  notionDatabaseId  String
+  repoId      String
+  branchName   String
+  targetBranch String @default("main")
+  prNumber    Int?
+  syncState   SyncState
+  latestRepoChange  DateTime?
+  lastSyncedAt  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  project Project            @relation(fields: [projectId], references: [id])
+  repo  ProjectRepository @relation(fields: [repoId], references: [id])
+  
+  @@unique([repoId, branchName])
+  @@unique([notionTaskPageId])
 }
