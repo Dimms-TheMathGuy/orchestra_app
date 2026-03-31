@@ -89,5 +89,64 @@ export class NotionService {
         }
     }
 
+    buildCompletionProperties(
+        propertyName: string,
+        propertyType: string,
+        completionValue: unknown,
+    ) {
+        switch (propertyType) {
+            case 'checkbox':
+                return {
+                    [propertyName]: {
+                        checkbox: Boolean(completionValue),
+                    },
+                };
+            case 'status':
+                return {
+                    [propertyName]: {
+                        status: {
+                            name: String(completionValue),
+                        },
+                    },
+                };
+            case 'select':
+                return {
+                    [propertyName]: {
+                        select: {
+                            name: String(completionValue),
+                        },
+                    },
+                };
+            default:
+                throw new BadRequestException(`Unsupported Notion completion property type: ${propertyType}`);
+        }
+    }
+
+    async updatePageProperties(pageId: string, properties: any) {
+        try {
+            await this.notionClient.pages.update({
+                page_id: pageId,
+                properties,
+            });
+        } catch (error: any) {
+            console.error(error);
+            throw new BadRequestException(error.message || 'Failed to update page in Notion');
+        }
+    }
+
+    async markTaskComplete(
+        pageId: string,
+        propertyName: string,
+        propertyType: string,
+        completionValue: unknown,
+    ) {
+        const properties = this.buildCompletionProperties(
+            propertyName,
+            propertyType,
+            completionValue,
+        );
+
+        await this.updatePageProperties(pageId, properties);
+    }
 
 }

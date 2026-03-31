@@ -152,6 +152,9 @@ model TaskBranchSync {
   projectId   String
   notionTaskPageId  String 
   notionDatabaseId  String
+  completionPropertyName String
+  completionPropertyType String
+  completionValue Json
   repoId      String
   branchName   String
   targetBranch String @default("main")

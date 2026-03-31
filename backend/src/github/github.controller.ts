@@ -1,6 +1,7 @@
-import { Controller, Get, Post, Body, Req, Param, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Param, Headers, BadRequestException } from '@nestjs/common';
 import { GithubService } from './github.service';
 import type { Request } from 'express';
+import { linkTaskBranchSchema } from './dto/link-task-branch.dto';
 
 @Controller('api/github')
 export class GithubController {
@@ -35,6 +36,27 @@ export class GithubController {
     );
   }
 
+  @Post(':projectId/task-branch-sync')
+  async linkTaskToBranch(@Param('projectId') projectId: string, @Body() body: unknown) {
+    try {
+      const validated = linkTaskBranchSchema.parse(body);
+
+      return this.githubService.linkTaskToBranch(
+        projectId,
+        validated.repoId,
+        validated.taskId,
+        validated.branchName,
+        validated.targetBranch,
+        validated.databaseId,
+        validated.completionPropertyName,
+        validated.completionPropertyType,
+        validated.completionValue,
+      );
+    } catch (error: any) {
+      throw new BadRequestException(error.errors ?? error.message);
+    }
+  }
+
   @Get('projects/:projectId/github-activity')
   getActivities(@Param('projectId') projectId: string) {
     return this.githubService.getActivities(projectId);
@@ -46,8 +68,11 @@ export class GithubController {
   }
 
   @Post('webhook')
-  async handleWebhook(@Body() payload: any, @Headers() headers: any) {
+  async handleWebhook(@Body() payload: any, @Headers() headers: any, @Req() req: Request & { rawBody?: Buffer }) {
     const event = headers['x-github-event'];
+    const signature = headers['x-hub-signature-256'];
+
+    await this.githubService.verifyWebhookSignature(payload, req.rawBody, signature);
 
     await this.githubService.processEvent(event, payload);
 
