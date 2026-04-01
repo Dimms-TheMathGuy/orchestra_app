@@ -1,28 +1,24 @@
 import { Injectable } from '@nestjs/common'
-
-
-type Transcript = {
-    id: number;
-    meetingId: number;
-    text: string;
-};
+import { PrismaService } from '../prisma/prisma.service'
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Injectable()
 export class TranscriptsService {
-    private transcripts: Transcript[] = [];
+  constructor(private prisma: PrismaService) {}
 
-    upload(meetingId: number, text: string) {
-        const transcript = {
-            id: Date.now(),
-            meetingId,
-            text
-        };
+  async upload(meetingId: string, text: string) {
+    return this.prisma.transcript.create({
+      data: {
+        meetingId,
+        text
+      }
+    })
+  }
 
-        this.transcripts.push(transcript);
-        return transcript;
-    }
-
-    findByMeeting(meetingId: number) {
-        return this.transcripts.find(t => t.meetingId === meetingId);
-    }
+  async findByMeeting(meetingId: string) {
+    return this.prisma.transcript.findMany({
+      where: { meetingId },
+      orderBy: { createdAt: 'asc' }
+    })
+  }
 }

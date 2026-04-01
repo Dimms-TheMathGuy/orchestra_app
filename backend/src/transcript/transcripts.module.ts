@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common'
-import { TranscriptsController } from './transcripts.controller'
-import { TranscriptsService } from './transcripts.service'
+import { Module } from '@nestjs/common';
+import { TranscriptsController } from './transcripts.controller';
+import { TranscriptsService } from './transcripts.service';
+import { PrismaModule } from '../prisma/prisma.module'; 
 
 @Module({
-    controllers: [TranscriptsController],
-    providers: [TranscriptsService],
-    exports: [TranscriptsService]
+  imports: [PrismaModule], 
+  controllers: [TranscriptsController],
+  providers: [TranscriptsService],
 })
-export class TranscriptsModule { }
+export class TranscriptsModule {}

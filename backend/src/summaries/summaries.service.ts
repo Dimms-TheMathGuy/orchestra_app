@@ -41,14 +41,17 @@ export class SummariesService {
 
     async generate(meetingId: number, blockId: string) {
 
-        const transcript = this.transcripts.findByMeeting(meetingId);
+        const transcript = await this.transcripts.findByMeeting(String(meetingId));
+
         if (!transcript) {
             return { error: "Transcript not found" }
         }
 
+        const fullText = transcript.map(t => t.text).join("\n");
+
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
 
-        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(transcript.text, schemaContext);
+        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(fullText, schemaContext);
         const draftBatchId = Date.now();
 
         const meetingDrafts: MeetingDraft[] = generatedDrafts.map((draft, index) => ({
