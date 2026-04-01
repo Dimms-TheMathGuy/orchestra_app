@@ -1,14 +1,22 @@
 import { Injectable, HttpException } from '@nestjs/common'
 import axios from 'axios'
 
+type ZoomRecordingFile = {
+    recording_type: string
+    download_url: string
+}
+
 @Injectable()
 export class ZoomService {
 
     private readonly baseUrl = 'https://api.zoom.us/v2'
 
     private async getAccessToken(): Promise<string> {
-        // Replace with your OAuth token retrieval logic
-        return process.env.ZOOM_ACCESS_TOKEN
+        const token = process.env.ZOOM_ACCESS_TOKEN
+        if (!token) {
+            throw new HttpException('Missing Zoom access token', 500)
+        }
+        return token
     }
 
     async retrieveTranscript(meetingId: string) {
@@ -17,7 +25,7 @@ export class ZoomService {
 
         // Step 1: Get recordings
         const response = await axios.get(
-            `${this.baseUrl}/meetings/${meetingId}/recordings`,
+            `${this.baseUrl}/meetings/${encodeURIComponent(meetingId)}/recordings`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`
@@ -25,11 +33,11 @@ export class ZoomService {
             }
         )
 
-        const recordings = response.data.recording_files
+        const recordings: ZoomRecordingFile[] = response.data?.recording_files ?? []
 
         // Step 2: Filter transcript file
         const transcriptFile = recordings.find(
-            (file: any) => file.recording_type === 'audio_transcript'
+            (file) => file.recording_type === 'audio_transcript'
         )
 
         if (!transcriptFile) {
@@ -47,8 +55,9 @@ export class ZoomService {
         )
 
         return {
+            id,
             meetingId,
-            transcript: transcriptResponse.data
+            text: transcriptResponse.data
         }
     }
 }
