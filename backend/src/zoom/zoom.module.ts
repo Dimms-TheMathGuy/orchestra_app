@@ -1,15 +1,10 @@
-import { Injectable } from '@nestjs/common'
+import { Module } from '@nestjs/common'
+import { ZoomService } from './zoom.service'
+import { TranscriptsService } from '../transcript/transcripts.service'
+import { ZoomController } from './zoom.controller'
 
-@Injectable()
-export class ZoomService {
-
-    async retrieveTranscript(meetingId: string) {
-
-        return {
-            meetingId,
-            transcript: "Example transcript retrieved from Zoom."
-        }
-
-    }
-
-}
+@Module({
+    providers: [ZoomService, TranscriptsService],
+    controllers: [ZoomController],
+})
+export class ZoomModule { }

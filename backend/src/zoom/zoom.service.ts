@@ -1,5 +1,6 @@
 import { Injectable, HttpException } from '@nestjs/common'
 import axios from 'axios'
+import { randomUUID } from 'crypto'
 
 type ZoomRecordingFile = {
     recording_type: string
@@ -55,7 +56,7 @@ export class ZoomService {
         )
 
         return {
-            id,
+            id: randomUUID(),
             meetingId,
             text: transcriptResponse.data
         }

@@ -6,7 +6,11 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.1",
+    "@nestjs/common": "^11.1.17",
+    "@nestjs/core": "^11.1.17",
+    "@nestjs/platform-express": "^11.1.17",
     "@prisma/client": "^6.19.2",
+    "axios": "^1.14.0",
     "bcrypt": "^6.0.0",
     "bcrypt-ts": "^8.0.1",
     "express": "^5.2.1",
@@ -15,6 +19,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "prisma": "^6.19.2"
   }
 }

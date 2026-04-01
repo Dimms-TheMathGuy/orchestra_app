@@ -13,6 +13,6 @@ export class TranscriptsController {
     }
     @Get(':meetingId')
     getTranscript(@Param('meetingId') id: string) {
-        return this.transcriptsService.findByMeeting(Number(id))
+        return this.transcriptsService.findByMeeting(String(id))
     }
 }
