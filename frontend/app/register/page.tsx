@@ -11,32 +11,48 @@ export default function Register(){
   const [message,setMessage] = useState("")
 
   async function handleRegister(){
+    console.log("CLICKED REGISTER");
 
     if(password !== confirmPassword){
       setMessage("Password not match")
       return
     }
 
-    const res = await fetch("http://localhost:3001/auth/register",{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify({
-        email,
-        password,
-        name: email
+    try {
+      const res = await fetch("http://localhost:3000/auth/register",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          email,
+          password,
+          name: email
+        })
       })
-    })
 
-    const data = await res.json()
+      console.log("STATUS:", res.status);
 
-    if(!res.ok){
-      setMessage(data.message || "Register failed")
-      return
+      let data = {}
+
+      try {
+        data = await res.json()
+      } catch {
+        data = {}
+      }
+
+      console.log("DATA:", data);
+
+      // if(!res.ok){
+      //   setMessage(data.message || "Register failed")
+      //   return
+      // }
+
+      setMessage("Register success!")
+    } catch (err) {
+      console.error("ERROR:", err);
+      setMessage("Cannot connect to server")
     }
-
-    setMessage("Register success!")
   }
 
   return(
