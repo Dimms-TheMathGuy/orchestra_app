@@ -111,3 +111,27 @@ Use this whenever a service starts injecting another module's service, such as `
 - Injecting a service without importing its module
 - Forgetting to export the provider from the source module
 - Assuming class imports alone are enough for Nest DI
+
+## Raw Request Body for Webhook Verification
+
+### What it is
+Nest can be configured to preserve the raw HTTP request body so integrations can verify signatures against the exact bytes that were sent.
+
+### Why it matters
+Webhook signature verification usually hashes the original raw payload, not the parsed JSON object. Without raw body access, HMAC verification can fail even when the secret is correct.
+
+### When to use it
+Use this when integrating with providers like GitHub or Stripe that sign webhook payloads.
+
+### How it appears in this project
+`main.ts` enables `rawBody: true`, and `GithubController` passes `req.rawBody` to `GithubService.verifyWebhookSignature(...)` before processing GitHub events.
+
+### Example / Syntax Sketch
+```ts
+const app = await NestFactory.create(AppModule, { rawBody: true });
+```
+
+### Common mistakes
+- Hashing parsed JSON instead of raw bytes
+- Forgetting to capture raw body at app bootstrap
+- Processing webhook events before signature verification

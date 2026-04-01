@@ -98,3 +98,27 @@ approved !== merged
 - Treating review approval as if code is already shipped
 - Triggering downstream completion too early
 - Forgetting that final state may depend on multiple events
+
+## Latest State Per Actor Beats "Ever Happened"
+
+### What it is
+Evaluating workflow state using the latest event per actor instead of checking whether a positive event ever appeared in history.
+
+### Why it matters
+Historical positive events can become stale. A reviewer can approve first and later request changes; checking only "was there ever an approval?" gives the wrong answer.
+
+### When to use it
+Use this when the same actor can emit multiple state-changing events over time and only the newest one should count.
+
+### How it appears in this project
+GitHub PR approval logic now groups reviews by reviewer and uses the latest review state per reviewer before deciding whether a merged PR is truly approved.
+
+### Example / Syntax Sketch
+```ts
+latestReviewByReviewer.set(reviewerId, newestReview);
+```
+
+### Common mistakes
+- Using `.some(...)` over the full event history
+- Ignoring event timestamps
+- Treating old approval as if it still reflects the final review state

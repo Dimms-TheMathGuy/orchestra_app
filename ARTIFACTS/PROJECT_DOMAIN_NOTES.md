@@ -34,6 +34,11 @@
 - `TaskBranchSync` is keyed by:
   - `notionTaskPageId`
   - `repoId + branchName`
+- For GitHub-linked Notion tasks with user-defined templates, completion cannot be hardcoded. The mapping must store:
+  - `completionPropertyName`
+  - `completionPropertyType`
+  - `completionValue`
+  so backend can build the correct Notion update payload at runtime.
 
 ## Architectural Decisions
 - Approval is per draft, not per meeting, so one problematic database draft can be edited or cancelled without blocking the others.
@@ -51,6 +56,8 @@
 - Gemini output should be treated as untrusted text first, then parsed and validated as JSON before use.
 - GitHub `pull_request_review` approval does not mean the PR has been merged.
 - GitHub `issue_comment` is a conversation/comment event, not a formal approval signal.
+- GitHub webhook requests should be verified with the repository webhook secret and raw request body before event processing.
+- Notion `pages.update(...)` targets an existing task page directly by `page_id`; the payload shape depends on the Notion property type (`checkbox`, `status`, `select`, etc.).
 
 ## Open Questions
 - When persistence is added, decide whether draft edits are saved as separate revision history or only latest state.
