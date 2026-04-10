@@ -10,6 +10,9 @@ import { UserModule } from './user/users.module';
 import { NotionModule } from './notion/notion.module';
 import { GithubModule } from './github/github.module';
 import { ActivityGateway } from './activity/activity.gateway';
+import { ZoomModule } from './zoom/zoom.module';
+import { TranscriptsModule } from './transcript/transcripts.module';
+import { ProjectsModule } from './projects/projects.module';
 
 @Module({
   imports: [
@@ -20,7 +23,10 @@ import { ActivityGateway } from './activity/activity.gateway';
     AuthModule,
     UserModule,
     NotionModule,
-    GithubModule, 
+    GithubModule,
+    TranscriptsModule,
+    ZoomModule,
+    ProjectsModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

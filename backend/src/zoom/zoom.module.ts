@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common'
 import { ZoomService } from './zoom.service'
-import { TranscriptsService } from '../transcript/transcripts.service'
 import { ZoomController } from './zoom.controller'
+import { TranscriptsModule } from '../transcript/transcripts.module'
 
 @Module({
-    providers: [ZoomService, TranscriptsService],
+    imports: [TranscriptsModule],
+    providers: [ZoomService],
     controllers: [ZoomController],
 })
 export class ZoomModule { }

@@ -41,7 +41,7 @@ export class SummariesService {
 
     async generate(meetingId: number, blockId: string) {
 
-        const transcript = this.transcripts.findByMeeting(meetingId);
+        const transcript = this.transcripts.findByMeeting(String(meetingId));
         if (!transcript) {
             return { error: "Transcript not found" }
         }
