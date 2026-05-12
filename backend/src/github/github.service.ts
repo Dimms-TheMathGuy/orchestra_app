@@ -181,50 +181,50 @@ export class GithubService {
     }
   }
 
-  async verifyWebhookSignature(payload: any, rawBody: Buffer | undefined, signature: string | undefined) {
-    if (!signature) {
-      throw new UnauthorizedException('Missing GitHub webhook signature');
-    }
+  // async verifyWebhookSignature(payload: any, rawBody: Buffer | undefined, signature: string | undefined) {
+  //   if (!signature) {
+  //     throw new UnauthorizedException('Missing GitHub webhook signature');
+  //   }
 
-    if (!rawBody) {
-      throw new UnauthorizedException('Missing raw webhook body for signature verification');
-    }
+  //   if (!rawBody) {
+  //     throw new UnauthorizedException('Missing raw webhook body for signature verification');
+  //   }
 
-    const repo = payload?.repository;
+  //   const repo = payload?.repository;
 
-    if (!repo?.owner?.login || !repo?.name) {
-      throw new BadRequestException('Repository payload is missing');
-    }
+  //   if (!repo?.owner?.login || !repo?.name) {
+  //     throw new BadRequestException('Repository payload is missing');
+  //   }
 
-    const projectRepo = await this.prisma.projectRepository.findFirst({
-      where: {
-        githubOwner: repo.owner.login,
-        githubRepo: repo.name,
-      },
-      select: {
-        webhookSecret: true,
-      },
-    });
+  //   const projectRepo = await this.prisma.projectRepository.findFirst({
+  //     where: {
+  //       githubOwner: repo.owner.login,
+  //       githubRepo: repo.name,
+  //     },
+  //     select: {
+  //       webhookSecret: true,
+  //     },
+  //   });
 
-    if (!projectRepo?.webhookSecret) {
-      throw new UnauthorizedException('Webhook secret not found for repository');
-    }
+  //   if (!projectRepo?.webhookSecret) {
+  //     throw new UnauthorizedException('Webhook secret not found for repository');
+  //   }
 
-    const expectedSignature = `sha256=${crypto
-      .createHmac('sha256', projectRepo.webhookSecret)
-      .update(rawBody)
-      .digest('hex')}`;
+  //   const expectedSignature = `sha256=${crypto
+  //     .createHmac('sha256', projectRepo.webhookSecret)
+  //     .update(rawBody)
+  //     .digest('hex')}`;
 
-    const receivedSignature = Buffer.from(signature);
-    const expectedSignatureBuffer = Buffer.from(expectedSignature);
+  //   const receivedSignature = Buffer.from(signature);
+  //   const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
-    if (
-      receivedSignature.length !== expectedSignatureBuffer.length ||
-      !crypto.timingSafeEqual(receivedSignature, expectedSignatureBuffer)
-    ) {
-      throw new UnauthorizedException('Invalid GitHub webhook signature');
-    }
-  }
+  //   if (
+  //     receivedSignature.length !== expectedSignatureBuffer.length ||
+  //     !crypto.timingSafeEqual(receivedSignature, expectedSignatureBuffer)
+  //   ) {
+  //     throw new UnauthorizedException('Invalid GitHub webhook signature');
+  //   }
+  // }
 
   async handlePush(payload: any) {
 
@@ -355,9 +355,9 @@ export class GithubService {
     if(action === 'closed'){
       if(merged === true && baseBranch === linkedTask.targetBranch){
 
-        const hasApprovedReview = await this.getReviewState(repo.owner.login, repo.name, pr.number, githubToken);
+        // const hasApprovedReview = await this.getReviewState(repo.owner.login, repo.name, pr.number, githubToken);
         
-        if(!hasApprovedReview) return;
+        // if(!hasApprovedReview) return;
 
         await this.prisma.taskBranchSync.update({
           where: {

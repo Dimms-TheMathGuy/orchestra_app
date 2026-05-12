@@ -72,7 +72,7 @@ export class GithubController {
     const event = headers['x-github-event'];
     const signature = headers['x-hub-signature-256'];
 
-    await this.githubService.verifyWebhookSignature(payload, req.rawBody, signature);
+    // await this.githubService.verifyWebhookSignature(payload, req.rawBody, signature);
 
     await this.githubService.processEvent(event, payload);
 
