@@ -9,6 +9,9 @@ import { PrismaModule } from './prisma/prisma.module';
 import { UserModule } from './user/users.module';
 import { NotionModule } from './notion/notion.module';
 import { GithubModule } from './github/github.module';
+import { TranscriptsModule } from './transcript/transcripts.module';
+import { SummariesModule } from './summaries/summaries.module';
+import { MeetingsModule } from './meetings/meetings.module';
 import { ActivityGateway } from './activity/activity.gateway';
 
 @Module({
@@ -20,7 +23,10 @@ import { ActivityGateway } from './activity/activity.gateway';
     AuthModule,
     UserModule,
     NotionModule,
-    GithubModule, 
+    GithubModule,
+    TranscriptsModule,
+    SummariesModule,
+    MeetingsModule, 
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common'
 
 type Transcript = {
     id: number;
-    meetingId: number;
+    meetingId: string;
     text: string;
 };
 
@@ -11,7 +11,7 @@ type Transcript = {
 export class TranscriptsService {
     private transcripts: Transcript[] = [];
 
-    upload(meetingId: number, text: string) {
+    upload(meetingId: string, text: string) {
         const transcript = {
             id: Date.now(),
             meetingId,
@@ -22,7 +22,7 @@ export class TranscriptsService {
         return transcript;
     }
 
-    findByMeeting(meetingId: number) {
+    findByMeeting(meetingId: string) {
         return this.transcripts.find(t => t.meetingId === meetingId);
     }
 }

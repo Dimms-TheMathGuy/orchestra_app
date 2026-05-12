@@ -58,6 +58,7 @@
 - GitHub `issue_comment` is a conversation/comment event, not a formal approval signal.
 - GitHub webhook requests should be verified with the repository webhook secret and raw request body before event processing.
 - Notion `pages.update(...)` targets an existing task page directly by `page_id`; the payload shape depends on the Notion property type (`checkbox`, `status`, `select`, etc.).
+- Supabase direct database host may be unreachable from some local networks; in this project, the session pooler connection string can be a more practical development connection path.
 
 ## Open Questions
 - When persistence is added, decide whether draft edits are saved as separate revision history or only latest state.

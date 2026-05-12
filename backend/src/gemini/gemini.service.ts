@@ -26,9 +26,13 @@ export class GeminiService {
     }
 
     async summarize(text: string, schemaContext: unknown): Promise<DatabaseDraft[]> {
+        // Demo fallback: use mock output when MOCK_GEMINI is enabled
+        if (process.env.MOCK_GEMINI === 'true') {
+            return this.mockSummarize(schemaContext, text);
+        }
 
         const model = this.genAI.getGenerativeModel({
-            model: "gemini-1.5-flash"
+            model: "gemini-2.0-flash"
         })
 
         const prompt = `
@@ -90,6 +94,82 @@ ${text}
 
         return validatedDrafts.data
 
+    }
+
+    // Mock to unblock demos when external API quota/credentials are unavailable
+    private mockSummarize(schemaContext: any, transcriptText: string): DatabaseDraft[] {
+        const contexts: Array<{ databaseId?: string; title?: string }> = Array.isArray(schemaContext) ? schemaContext : []
+
+        // Parsed demo data from the transcript
+        const meetingTitle = 'Q3 Roadmap Discussion'
+        const meetingSummary = transcriptText
+        const task1 = { name: 'Launch new dashboard', assignee: 'John', status: 'Not started', deadline: '2026-05-31' }
+        const task2 = { name: 'Fix authentication bug', assignee: 'Sarah', status: 'Not started', deadline: '2026-05-31' }
+
+        return contexts.map((ctx) => {
+            const dbTitle = String(ctx.title ?? 'Demo Drafts')
+            const dbId = String(ctx.databaseId ?? 'mock-db')
+
+            if (dbTitle === 'Meeting Summaries') {
+                return {
+                    databaseId: dbId,
+                    title: dbTitle,
+                    entries: [{
+                        properties: {
+                            Name: { title: [{ text: { content: meetingTitle } }] },
+                            Summaries: { rich_text: [{ text: { content: meetingSummary } }] }
+                        }
+                    }]
+                }
+            }
+
+            if (dbTitle === 'Tasks') {
+                return {
+                    databaseId: dbId,
+                    title: dbTitle,
+                    entries: [
+                        {
+                            properties: {
+                                Name: { title: [{ text: { content: task1.name } }] },
+                                Status: { status: { name: task1.status } },
+                                Deadline: { date: { start: task1.deadline } }
+                            }
+                        },
+                        {
+                            properties: {
+                                Name: { title: [{ text: { content: task2.name } }] },
+                                Status: { status: { name: task2.status } },
+                                Deadline: { date: { start: task2.deadline } }
+                            }
+                        }
+                    ]
+                }
+            }
+
+            if (dbTitle === 'bugs and Report') {
+                return {
+                    databaseId: dbId,
+                    title: dbTitle,
+                    entries: [{
+                        properties: {
+                            Name: { title: [{ text: { content: task2.name } }] },
+                            Status: { status: { name: task2.status } }
+                        }
+                    }]
+                }
+            }
+
+            // Fallback for unknown databases
+            return {
+                databaseId: dbId,
+                title: dbTitle,
+                entries: [{
+                    properties: {
+                        Name: { title: [{ text: { content: meetingTitle } }] }
+                    }
+                }]
+            }
+        })
     }
 
 }

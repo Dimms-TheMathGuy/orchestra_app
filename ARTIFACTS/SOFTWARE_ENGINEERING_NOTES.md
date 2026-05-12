@@ -122,3 +122,28 @@ latestReviewByReviewer.set(reviewerId, newestReview);
 - Using `.some(...)` over the full event history
 - Ignoring event timestamps
 - Treating old approval as if it still reflects the final review state
+
+## Manual DB Change vs Migration History
+
+### What it is
+Separating "the database schema was changed" from "the migration tool knows that the change was applied".
+
+### Why it matters
+Applying SQL manually can make the database correct while still leaving migration history out of sync, which later confuses Prisma status checks and teammates.
+
+### When to use it
+Use this concept when a normal migration command cannot run cleanly and you must apply SQL through a fallback path like `db execute`.
+
+### How it appears in this project
+The completion-mapping migration SQL was executed directly first, then Prisma migration history was synchronized with `migrate resolve --applied`.
+
+### Example / Syntax Sketch
+```bash
+prisma db execute ...
+prisma migrate resolve --applied <migration_name>
+```
+
+### Common mistakes
+- Assuming `db execute` automatically marks the migration as applied
+- Forgetting to re-sync Prisma history after a manual apply
+- Confusing connectivity failures with SQL syntax failures
