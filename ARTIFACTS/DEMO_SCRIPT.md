@@ -21,7 +21,26 @@ curl -X POST http://localhost:3000/auth/login -H "Content-Type: application/json
 
 ---
 
-## 2. AI Note Taker (Transcript → Gemini → Draft → Notion)
+## 2. Zoom Integration
+
+### Schedule a Meeting
+```cmd
+curl -X POST http://localhost:3000/zoom/meetings -H "Content-Type: application/json" -d "{\"topic\": \"Q3 Roadmap Discussion\", \"start_time\": \"2026-05-14T10:00:00+07:00\", \"duration_minutes\": 30, \"agenda\": \"Plan Q3 deliverables and assign tasks\"}"
+```
+
+### List Meetings
+```cmd
+curl http://localhost:3000/zoom/meetings
+```
+
+### Retrieve Transcript (requires meeting with cloud recording completed)
+```cmd
+curl http://localhost:3000/zoom/meetings/MEETING_ID/transcript
+```
+
+---
+
+## 3. AI Note Taker (Transcript → Gemini → Draft → Notion)
 
 ### Upload Transcript
 ```cmd
@@ -50,7 +69,7 @@ curl -X POST http://localhost:3000/summaries/test-meeting-123/drafts/DRAFT_ID/ap
 
 ---
 
-## 3. GitHub → Notion Sync
+## 4. GitHub → Notion Sync
 
 ### Link Notion Task to Branch
 ```cmd

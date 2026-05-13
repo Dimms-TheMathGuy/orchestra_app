@@ -12,6 +12,7 @@ import { GithubModule } from './github/github.module';
 import { TranscriptsModule } from './transcript/transcripts.module';
 import { SummariesModule } from './summaries/summaries.module';
 import { MeetingsModule } from './meetings/meetings.module';
+import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
 
 @Module({
@@ -26,7 +27,8 @@ import { ActivityGateway } from './activity/activity.gateway';
     GithubModule,
     TranscriptsModule,
     SummariesModule,
-    MeetingsModule, 
+    MeetingsModule,
+    ZoomModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],
