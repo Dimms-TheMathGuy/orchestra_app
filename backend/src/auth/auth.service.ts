@@ -62,6 +62,8 @@ export class AuthService {
       },
     });
 
+    console.log("USER CREATED:", user);
+
     return {
       message: "User registered successfully",
       userId: user.id,

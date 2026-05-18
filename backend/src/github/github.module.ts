@@ -7,6 +7,10 @@ import { ActivityModule } from 'src/activity/activity.module';
 
 @Module({
   imports: [PrismaModule, NotionModule, ActivityModule],
+import { ActivityModule } from 'src/activity/activity.module';
+
+@Module({
+  imports: [PrismaModule, ActivityModule],
   controllers: [GithubController],
   providers: [GithubService],
 })
