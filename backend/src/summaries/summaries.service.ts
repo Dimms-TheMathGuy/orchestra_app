@@ -50,9 +50,6 @@ export class SummariesService {
         const fullText = transcript.map(t => t.text).join("\n");
 
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
-
-        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(transcript.text, schemaContext);
-        const draftBatchId = Date.now();  // log waktu batch dari draft dibuat pertama kali
         const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(fullText, schemaContext);
         const draftBatchId = Date.now();
 

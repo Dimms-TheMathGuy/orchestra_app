@@ -16,7 +16,6 @@ import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
 import { PasskeyModule } from './passkey/passkey.module';
 import { DashboardModule } from './dashboard/dashboard.module';
-import { TranscriptsModule } from './transcript/transcripts.module';
 
 @Module({
   imports: [
