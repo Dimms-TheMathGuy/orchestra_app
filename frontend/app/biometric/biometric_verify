@@ -28,6 +28,5 @@ export default function VerifyBiometricButton({ projectId }: { projectId: string
       alert('Biometric failed');
     }
   };
-
   return <button onClick={handleVerify}>Verify with Biometric</button>;
 }

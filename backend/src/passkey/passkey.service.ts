@@ -77,7 +77,7 @@ export class PasskeyService {
       data: {
         userId,
         credentialId: credential.id,
-        publicKey: Buffer.from(credential.publicKey),
+        publicKey: Buffer.from(credential.publicKey).toString("base64"),
         counter: credential.counter,
         transports: body.response?.transports?.join(',') ?? null,
       },

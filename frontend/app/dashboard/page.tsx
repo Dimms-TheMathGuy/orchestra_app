@@ -57,8 +57,38 @@ export default function DashboardPage() {
       return
     }
 
-    // nanti biometric jalan di sini
-    router.push(`/dashboard/project/${projectId}`)
+    try {
+      const { startAuthentication } = await import("@simplewebauthn/browser")
+
+      const optionsRes = await fetch("http://localhost:3001/passkey/auth/options", {
+        method: "POST",
+        credentials: "include",
+      })
+
+      const optionsJSON = await optionsRes.json()
+
+      const authResponse = await startAuthentication({ optionsJSON })
+
+      const verifyRes = await fetch("http://localhost:3001/passkey/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(authResponse),
+      })
+
+      const result = await verifyRes.json()
+
+      if (result.verified) {
+        router.push(`/dashboard/project/${projectId}`)
+      } else {
+        alert("Biometric verification failed")
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Biometric verification cancelled or failed")
+    }
   }
 
   if (!dashboardData) {
