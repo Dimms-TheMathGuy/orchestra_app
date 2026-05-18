@@ -13,6 +13,7 @@ import { NotionModule } from 'src/notion/notion.module'
         NotionModule
     ],
     controllers: [SummariesController],
-    providers: [SummariesService]
+    providers: [SummariesService],
+    exports: [SummariesService]
 })
 export class SummariesModule { }
