@@ -10,14 +10,14 @@ export class SummariesController {
     @Post(':meetingId')
     generate(@Param('meetingId') id: string, @Body('blockId') blockId: string) {
 
-        return this.summaries.generate(Number(id), blockId)
+        return this.summaries.generate(id, blockId)
 
     }
 
     @Get(':meetingId')
     getSummary(@Param('meetingId') id: string) {
 
-        return this.summaries.findByMeeting(Number(id))
+        return this.summaries.findByMeeting(id)
 
     }
 
@@ -26,7 +26,7 @@ export class SummariesController {
 
         try {
             const validated = updateDraftSchema.parse(body);
-            return this.summaries.updateDraft(Number(id), draftId, validated.entries)
+            return this.summaries.updateDraft(id, draftId, validated.entries)
         } catch (error: any) {
             throw new BadRequestException(error.issues ?? error.errors ?? error.message)
         }
@@ -36,14 +36,14 @@ export class SummariesController {
     @Post(':meetingId/drafts/:draftId/cancel')
     cancelDraft(@Param('meetingId') id: string, @Param('draftId') draftId: string) {
 
-        return this.summaries.cancelDraft(Number(id), draftId)
+        return this.summaries.cancelDraft(id, draftId)
 
     }
 
     @Post(':meetingId/drafts/:draftId/approve')
     approveSummary(@Param('meetingId') id: string, @Param('draftId') draftId: string) {
 
-        return this.summaries.approveDraft(Number(id), draftId)
+        return this.summaries.approveDraft(id, draftId)
 
     }
 
