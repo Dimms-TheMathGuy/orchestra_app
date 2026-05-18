@@ -2,8 +2,10 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function Register(){
+  const router = useRouter()
 
   const [email,setEmail] = useState("")
   const [password,setPassword] = useState("")
@@ -18,6 +20,15 @@ export default function Register(){
       return
     }
 
+    const res = await fetch("http://localhost:3000/auth/register",{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        email,
+        password,
+        name: email
     try {
       const res = await fetch("http://localhost:3000/auth/register",{
         method:"POST",
@@ -41,6 +52,11 @@ export default function Register(){
         data = {}
       }
 
+    setMessage("Register success!")
+
+    setTimeout(() => {
+      router.push("/login")
+    }, 800)
       console.log("DATA:", data);
 
       // if(!res.ok){
@@ -57,9 +73,7 @@ export default function Register(){
 
   return(
     <div className="flex items-center justify-center min-h-screen bg-[#3f3b5b]">
-
       <div className="bg-[#e8e3d3] w-[420px] p-10 rounded-md shadow-md">
-
         <h1 className="text-center text-gray-600 mb-6 text-lg">
           Make your Orchestra account
         </h1>
@@ -116,9 +130,7 @@ export default function Register(){
         <p className="text-center text-sm text-red-500 mt-4">
           {message}
         </p>
-
       </div>
-
     </div>
   )
 }

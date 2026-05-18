@@ -1,24 +1,39 @@
 "use client"
 
 import { useState } from "react"
-import { signIn } from "next-auth/react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export default function Login() {
 
   const [email,setEmail] = useState("")
   const [password,setPassword] = useState("")
+  const [message,setMessage] = useState("")
+  const router = useRouter()
 
-  async function handleLogin(){
-
-    await signIn("credentials",{
+  async function handleLogin() {
+  const res = await fetch("http://localhost:3000/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       email,
       password,
-      redirect:true,
-      callbackUrl:"/dashboard"
-    })
+    }),
+  })
 
+  const data = await res.json()
+
+  if (!res.ok) {
+    setMessage(data.message || "Login failed")
+    return
   }
+
+  localStorage.setItem("token", data.access_token)
+
+  router.push("/dashboard")
+}
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#3f3b5b]">
@@ -64,6 +79,10 @@ export default function Login() {
         >
           Login
         </button>
+
+        <p className="text-red-500 text-sm mt-4">
+          {message}
+        </p>
 
       </div>
 

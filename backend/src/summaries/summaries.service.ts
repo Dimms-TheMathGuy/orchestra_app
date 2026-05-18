@@ -7,7 +7,7 @@ type DraftStatus = 'pending' | 'approved' | 'cancelled';
 
 type Summary = {
     id: number;
-    meetingId: number;
+    meetingId: string;
     drafts: MeetingDraft[];
 };
 
@@ -39,7 +39,7 @@ export class SummariesService {
         private notion: NotionService
     ) { };
 
-    async generate(meetingId: number, blockId: string) {
+    async generate(meetingId: string, blockId: string) {
 
         const transcript = await this.transcripts.findByMeeting(String(meetingId));
 
@@ -51,6 +51,8 @@ export class SummariesService {
 
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
 
+        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(transcript.text, schemaContext);
+        const draftBatchId = Date.now();  // log waktu batch dari draft dibuat pertama kali
         const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(fullText, schemaContext);
         const draftBatchId = Date.now();
 
@@ -77,13 +79,13 @@ export class SummariesService {
         return summary;
     }
 
-    findByMeeting(meetingId: number) {
+    findByMeeting(meetingId: string) {
 
         return this.summaries.find((s) => s.meetingId === meetingId);
 
     }
 
-    private findDraft(meetingId: number, draftId: string) {
+    private findDraft(meetingId: string, draftId: string) {
 
         const summary = this.findByMeeting(meetingId);
         if (!summary) {
@@ -98,7 +100,7 @@ export class SummariesService {
         return { summary, draft }
     }
 
-    async approveDraft(meetingId: number, draftId: string) {
+    async approveDraft(meetingId: string, draftId: string) {
 
         const draftLookup = this.findDraft(meetingId, draftId);
         if ('error' in draftLookup) {
@@ -133,7 +135,7 @@ export class SummariesService {
         }
     }
 
-    updateDraft(meetingId: number, draftId: string, entries: DraftEntry[]) {
+    updateDraft(meetingId: string, draftId: string, entries: DraftEntry[]) {
 
         const draftLookup = this.findDraft(meetingId, draftId);
         if ('error' in draftLookup) {
@@ -155,7 +157,7 @@ export class SummariesService {
         return draft;
     }
 
-    cancelDraft(meetingId: number, draftId: string) {
+    cancelDraft(meetingId: string, draftId: string) {
 
         const draftLookup = this.findDraft(meetingId, draftId);
         if ('error' in draftLookup) {
