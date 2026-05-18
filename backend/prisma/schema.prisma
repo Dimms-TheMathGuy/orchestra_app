@@ -28,6 +28,9 @@ model User {
   githubId         String? @unique
   githubUsername   String?
   githubToken      String?
+
+  passkeys Passkey[]
+  currentChallenge String?
 }
 
 model Project {
@@ -170,4 +173,16 @@ model TaskBranchSync {
   
   @@unique([repoId, branchName])
   @@unique([notionTaskPageId])
+}
+
+model Passkey {
+  id           String   @id @default(cuid())
+  userId       String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      Int
+  transports   String?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
