@@ -17,12 +17,29 @@ export class TranscriptsService {
             meetingId,
             text
         };
+import { PrismaService } from '../prisma/prisma.service'
+import { PrismaModule } from '../prisma/prisma.module';
 
-        this.transcripts.push(transcript);
-        return transcript;
-    }
+@Injectable()
+export class TranscriptsService {
+  constructor(private prisma: PrismaService) {}
+
+  async upload(meetingId: string, text: string) {
+    return this.prisma.transcript.create({
+      data: {
+        meetingId,
+        text
+      }
+    })
+  }
 
     findByMeeting(meetingId: string) {
         return this.transcripts.find(t => t.meetingId === meetingId);
     }
+  async findByMeeting(meetingId: string) {
+    return this.prisma.transcript.findMany({
+      where: { meetingId },
+      orderBy: { createdAt: 'asc' }
+    })
+  }
 }

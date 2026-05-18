@@ -18,6 +18,7 @@ model User {
   email      String   @unique
   password   String
   name       String
+  company    String?
   avatarUrl  String?
   googleId   String?
   createdAt  DateTime @default(now())
@@ -25,7 +26,7 @@ model User {
   projectsOwned    Project[]       @relation("ProjectOwner")
   memberships      ProjectMember[]
   messages         ProjectMessage[]
-  githubId         String? @unique
+  githubId         Int? @unique
   githubUsername   String?
   githubToken      String?
 
@@ -93,6 +94,7 @@ model MeetingLog {
   createdAt     DateTime @default(now())
 
   project Project @relation(fields: [projectId], references: [id])
+  transcripts Transcript[] 
 }
 
 model ProjectRepository {
@@ -186,4 +188,11 @@ model Passkey {
   createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Transcript {
+  id        String   @id @default(uuid())
+  meetingId String
+  text      String
+  createdAt DateTime @default(now())
+
+  meeting   MeetingLog @relation(fields: [meetingId], references: [id])
 }
