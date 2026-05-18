@@ -38,6 +38,7 @@ model Project {
   name          String
   description   String?
   ownerId       String
+  status        String   @default("ongoing")
   createdAt     DateTime @default(now())
   notionDbId    String?
   notionSchema  Json?

@@ -15,6 +15,7 @@ import { MeetingsModule } from './meetings/meetings.module';
 import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
 import { PasskeyModule } from './passkey/passkey.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { PasskeyModule } from './passkey/passkey.module';
     MeetingsModule,
     ZoomModule,
     PasskeyModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],
