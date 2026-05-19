@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
@@ -13,40 +13,81 @@ export class PasskeyController {
 
   rpName = 'Orchestra';
   rpID = 'localhost';
-  origin = 'http://localhost:3000';
+  origin = 'http://localhost:3001';
+
+  @Get('status/:userId')
+  async getPasskeyStatus(@Param('userId') userId: string) {
+    const count = await this.prisma.passkey.count({
+      where: { userId },
+    });
+
+    return { hasPasskey: count > 0 };
+  }
 
   @Post('register/options')
-  async registerOptions(@Req() req: any) {
-    // SEMENTARA TESTING:
-    // nanti ganti ini dari user login/JWT
-    const userId = 'test-user-id';
+  async registerOptions(@Body() body: any) {
+    console.log('BODY REGISTER OPTIONS:', body);
+
+    const userId = body?.userId;
+
+    if (!userId) {
+      return {
+        error: 'userId is required',
+        bodyReceived: body,
+      };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+
+    if (!user) {
+      return { error: 'User not found' };
+    }
 
     const options = await generateRegistrationOptions({
       rpName: this.rpName,
       rpID: this.rpID,
-      userID: Buffer.from(userId),
-      userName: 'testuser@orchestra.com',
+      userID: Buffer.from(user.id),
+      userName: user.email,
+      userDisplayName: user.name ?? user.email,
       attestationType: 'none',
+      excludeCredentials: user.passkeys.map((passkey) => ({
+        id: passkey.credentialId,
+        transports: passkey.transports
+          ? (passkey.transports.split(',') as any)
+          : undefined,
+      })),
       authenticatorSelection: {
         residentKey: 'preferred',
         userVerification: 'preferred',
       },
     });
 
-    req.session.challenge = options.challenge;
-    req.session.userId = userId;
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { currentChallenge: options.challenge },
+    });
 
     return options;
   }
 
   @Post('register/verify')
-  async registerVerify(@Req() req: any, @Body() body: any) {
-    const expectedChallenge = req.session.challenge;
-    const userId = req.session.userId;
+  async registerVerify(
+    @Body() body: { userId: string; response: any },
+  ) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: body.userId },
+    });
+
+    if (!user || !user.currentChallenge) {
+      return { verified: false, error: 'Challenge not found' };
+    }
 
     const verification = await verifyRegistrationResponse({
-      response: body,
-      expectedChallenge,
+      response: body.response,
+      expectedChallenge: user.currentChallenge,
       expectedOrigin: this.origin,
       expectedRPID: this.rpID,
     });
@@ -59,63 +100,112 @@ export class PasskeyController {
 
     await this.prisma.passkey.create({
       data: {
-        userId,
+        userId: user.id,
         credentialId: credential.id,
         publicKey: Buffer.from(credential.publicKey).toString('base64'),
         counter: credential.counter,
+        transports: body.response.response?.transports?.join(',') ?? null,
+      },
+    });
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        currentChallenge: null,
       },
     });
 
     return { verified: true };
   }
 
-  @Post('auth/options')
-  async authOptions(@Req() req: any) {
-    const userId = 'test-user-id';
+ @Post('auth/options')
+  async authOptions(@Body() body: any) {
+    console.log('BODY AUTH OPTIONS:', body);
+
+    const userId = body?.userId;
+
+    if (!userId) {
+      return {
+        error: 'userId is required',
+        bodyReceived: body,
+      };
+    }
 
     const passkeys = await this.prisma.passkey.findMany({
       where: { userId },
     });
+
+    if (passkeys.length === 0) {
+      return { error: 'No passkey registered' };
+    }
 
     const options = await generateAuthenticationOptions({
       rpID: this.rpID,
       userVerification: 'preferred',
       allowCredentials: passkeys.map((passkey) => ({
         id: passkey.credentialId,
-        type: 'public-key',
+        transports: passkey.transports
+          ? (passkey.transports.split(',') as any)
+          : undefined,
       })),
     });
 
-    req.session.challenge = options.challenge;
-    req.session.userId = userId;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        currentChallenge: options.challenge,
+      },
+    });
 
     return options;
   }
 
   @Post('auth/verify')
-  async authVerify(@Req() req: any, @Body() body: any) {
-    const userId = req.session.userId;
+  async authVerify(@Body() body: any) {
+    console.log('BODY AUTH VERIFY:', body);
+
+    const userId = body?.userId;
+    const response = body?.response;
+
+    if (!userId || !response) {
+      return {
+        verified: false,
+        error: 'userId and response are required',
+        bodyReceived: body,
+      };
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user || !user.currentChallenge) {
+      return { verified: false, error: 'Challenge not found' };
+    }
 
     const passkey = await this.prisma.passkey.findFirst({
       where: {
-        userId,
-        credentialId: body.id,
+        userId: user.id,
+        credentialId: response.id,
       },
     });
 
     if (!passkey) {
-      return { verified: false };
+      return { verified: false, error: 'Passkey not found' };
     }
 
     const verification = await verifyAuthenticationResponse({
-      response: body,
-      expectedChallenge: req.session.challenge,
+      response,
+      expectedChallenge: user.currentChallenge,
       expectedOrigin: this.origin,
       expectedRPID: this.rpID,
       credential: {
         id: passkey.credentialId,
         publicKey: Buffer.from(passkey.publicKey, 'base64'),
         counter: passkey.counter,
+        transports: passkey.transports
+          ? (passkey.transports.split(',') as any)
+          : undefined,
       },
     });
 
@@ -127,6 +217,13 @@ export class PasskeyController {
       where: { id: passkey.id },
       data: {
         counter: verification.authenticationInfo.newCounter,
+      },
+    });
+
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: {
+        currentChallenge: null,
       },
     });
 

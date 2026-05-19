@@ -136,7 +136,7 @@ export class PasskeyService {
       throw new ForbiddenException('Invalid passkey');
     }
 
-    const credentialPublicKey = Uint8Array.from(passkey.publicKey);
+    const credentialPublicKey = Buffer.from(passkey.publicKey, "base64");
 
     const credentialTransports = passkey.transports
     ? (passkey.transports.split(',') as AuthenticatorTransportFuture[])
@@ -173,4 +173,15 @@ export class PasskeyService {
 
     return { verified: true };
   }
+
+  async getPasskeyStatus(userId: string) {
+    const count = await this.prisma.passkey.count({
+      where: { userId },
+    });
+
+    return {
+      hasPasskey: count > 0,
+    };
+  }
+
 }

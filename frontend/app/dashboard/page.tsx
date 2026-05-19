@@ -15,6 +15,7 @@ import {
 } from "recharts"
 
 export default function DashboardPage() {
+  const [hasPasskey, setHasPasskey] = useState(false)
   const router = useRouter()
 
   const [dashboardData, setDashboardData] = useState<any>(null)
@@ -24,6 +25,10 @@ export default function DashboardPage() {
     async function fetchDashboard() {
       const userId = localStorage.getItem("userId")
       const token = localStorage.getItem("token")
+      const passkeyRes = await fetch(`http://localhost:3000/passkey/status/${userId}`)
+      const passkeyData = await passkeyRes.json()
+
+      setHasPasskey(passkeyData.hasPasskey)
 
       if (!token || !userId) {
         router.push("/login")
@@ -57,25 +62,40 @@ export default function DashboardPage() {
       return
     }
 
+    if (!hasPasskey) {
+      alert("Please setup biometric first")
+      router.push("/biometric/biometric_register")
+      return
+    }
+
     try {
       const { startAuthentication } = await import("@simplewebauthn/browser")
 
-      const optionsRes = await fetch("http://localhost:3001/passkey/auth/options", {
+      const userId = localStorage.getItem('userId');
+
+      const optionsRes = await fetch("http://localhost:3000/passkey/auth/options", {
         method: "POST",
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId }),
         credentials: "include",
       })
 
       const optionsJSON = await optionsRes.json()
 
-      const authResponse = await startAuthentication({ optionsJSON })
+      const authResponse = await startAuthentication(optionsJSON)
 
-      const verifyRes = await fetch("http://localhost:3001/passkey/auth/verify", {
+      const verifyRes = await fetch("http://localhost:3000/passkey/auth/verify", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify(authResponse),
+        body: JSON.stringify({
+          userId,
+          response: authResponse,
+        }),
       })
 
       const result = await verifyRes.json()
@@ -99,9 +119,23 @@ export default function DashboardPage() {
     )
   }
 
-  const filteredProjects = dashboardData.projects.filter(
-    (project: any) => project.status === activeTab
-  )
+  const filteredProjects = dashboardData.projects.filter((project: any) => {
+    const status = String(project.status || "")
+      .toLowerCase()
+      .replaceAll("_", "")
+      .replaceAll("-", "")
+      .replaceAll(" ", "")
+
+    if (activeTab === "ongoing") {
+      return status !== "completed" && status !== "done" && status !== "finished"
+    }
+
+    if (activeTab === "completed") {
+      return status === "completed" || status === "done" || status === "finished"
+    }
+
+    return true
+  })
 
   const colors = ["#7ed6c1", "#ff7675", "#555", "#f6c56f"]
 
@@ -164,6 +198,15 @@ export default function DashboardPage() {
           <p className="text-gray-500 mb-8">
             Hello {dashboardData.user.name}, welcome back!
           </p>
+
+          {!hasPasskey && (
+            <button
+              onClick={() => router.push("/biometric/biometric_register")}
+              className="bg-black text-white px-4 py-2 rounded-lg mb-5"
+            >
+              Setup Biometric
+            </button>
+          )}
 
           <div className="grid grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-lg p-5">

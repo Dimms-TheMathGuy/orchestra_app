@@ -16,7 +16,7 @@ async function bootstrap() {
     session({
       secret: 'orchestra-passkey-secret',
       resave: false,
-      saveUninitialized: false,
+      saveUninitialized: true,
       cookie: {
         secure: false,
       },
