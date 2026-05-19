@@ -16,6 +16,8 @@ import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
 import { PasskeyModule } from './passkey/passkey.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { ProjectsModule } from './projects/projects.module';
+import { MeetingReviewModule } from './meeting-review/meeting-review.module';
 
 @Module({
   imports: [
@@ -26,8 +28,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AuthModule,
     UserModule,
     NotionModule,
-    GithubModule, 
-    TranscriptsModule,
     GithubModule,
     TranscriptsModule,
     SummariesModule,
@@ -35,6 +35,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ZoomModule,
     PasskeyModule,
     DashboardModule,
+    ProjectsModule,
+    MeetingReviewModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

@@ -10,4 +10,4 @@ import { ActivityModule } from 'src/activity/activity.module';
   controllers: [GithubController],
   providers: [GithubService],
 })
-export class GithubModule {}
+export class GithubModule { }

@@ -1,20 +1,18 @@
 import { Injectable } from '@nestjs/common'
-import { PrismaService } from '../prisma/prisma.service'
-import { PrismaModule } from '../prisma/prisma.module';
-
 
 type Transcript = {
-    id: number;
+    id: string;
     meetingId: string;
     text: string;
 };
 
 @Injectable()
 export class TranscriptsService {
-  constructor(private prisma: PrismaService) {}
+    private transcripts: Transcript[] = [];
+
     upload(meetingId: string, text: string) {
         const transcript = {
-            id: Date.now(),
+            id: Date.now().toString(),
             meetingId,
             text
         };
