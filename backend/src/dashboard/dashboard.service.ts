@@ -21,12 +21,19 @@ export class DashboardService {
       throw new NotFoundException('User not found');
     }
 
-    const projectMembers = await this.prisma.projectMember.findMany({
-      where: { userId },
+    const projectsRaw = await this.prisma.project.findMany({
       include: {
-        project: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatarUrl: true,
+          },
+        },
+        members: {
           include: {
-            owner: {
+            user: {
               select: {
                 id: true,
                 name: true,
@@ -34,44 +41,35 @@ export class DashboardService {
                 avatarUrl: true,
               },
             },
-            members: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    avatarUrl: true,
-                  },
-                },
-              },
-            },
-            messages: {
-              orderBy: {
-                createdAt: 'desc',
-              },
-              take: 1,
-            },
-            meetings: {
-              orderBy: {
-                createdAt: 'desc',
-              },
-              take: 5,
-            },
-            activities: {
-              orderBy: {
-                createdAt: 'desc',
-              },
-              take: 10,
-            },
-            taskBranchSyncs: true,
           },
         },
+        messages: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 1,
+        },
+        meetings: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 5,
+        },
+        activities: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          take: 10,
+        },
+        taskBranchSyncs: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
 
-    const projects = projectMembers.map((member) => {
-      const tasks = member.project.taskBranchSyncs;
+    const projects = projectsRaw.map((project) => {
+      const tasks = project.taskBranchSyncs;
 
       const doneTasks = tasks.filter(
         (task) => task.syncState === SyncState.DONE,
@@ -80,20 +78,26 @@ export class DashboardService {
       const progress =
         tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : 0;
 
+      const currentMember = project.members.find(
+        (member) => member.userId === userId,
+      );
+
+      const isMember = project.ownerId === userId || !!currentMember;
+
       return {
-        id: member.project.id,
-        name: member.project.name,
-        description: member.project.description,
-        status: member.project.status,
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        status: project.status,
         progress,
-        isMember: true,
-        role: member.role,
-        leader: member.project.owner,
-        members: member.project.members.map((m) => m.user),
+        isMember,
+        role: project.ownerId === userId ? 'owner' : currentMember?.role ?? null,
+        leader: project.owner,
+        members: project.members.map((m) => m.user),
         lastActivity:
-          member.project.activities[0]?.createdAt ??
-          member.project.messages[0]?.createdAt ??
-          member.project.createdAt,
+          project.activities[0]?.createdAt ??
+          project.messages[0]?.createdAt ??
+          project.createdAt,
       };
     });
 
@@ -105,23 +109,23 @@ export class DashboardService {
       (project) => project.status === 'completed',
     ).length;
 
-    const totalTasks = projectMembers.reduce((total, member) => {
-      return total + member.project.taskBranchSyncs.length;
+    const totalTasks = projectsRaw.reduce((total, project) => {
+      return total + project.taskBranchSyncs.length;
     }, 0);
 
-    const doneTasks = projectMembers.reduce((total, member) => {
+    const doneTasks = projectsRaw.reduce((total, project) => {
       return (
         total +
-        member.project.taskBranchSyncs.filter(
+        project.taskBranchSyncs.filter(
           (task) => task.syncState === SyncState.DONE,
         ).length
       );
     }, 0);
 
-    const activeTasks = projectMembers.reduce((total, member) => {
+    const activeTasks = projectsRaw.reduce((total, project) => {
       return (
         total +
-        member.project.taskBranchSyncs.filter(
+        project.taskBranchSyncs.filter(
           (task) =>
             task.syncState === SyncState.IN_PROGRESS ||
             task.syncState === SyncState.IN_REVIEW,
@@ -129,11 +133,11 @@ export class DashboardService {
       );
     }, 0);
 
-    const meetingSchedule = projectMembers.flatMap((member) =>
-      member.project.meetings.map((meeting) => ({
+    const meetingSchedule = projectsRaw.flatMap((project) =>
+      project.meetings.map((meeting) => ({
         id: meeting.id,
-        projectId: member.project.id,
-        projectName: member.project.name,
+        projectId: project.id,
+        projectName: project.name,
         title: meeting.topic ?? 'Untitled Meeting',
         status: meeting.status,
         date: meeting.createdAt,
@@ -151,7 +155,6 @@ export class DashboardService {
 
     return {
       user,
-
       performanceData: [
         {
           month: 'Projects',
@@ -174,15 +177,10 @@ export class DashboardService {
           performance: doneTasks,
         },
       ],
-
       contributionData,
-
       projects,
-
       ongoingMeeting,
-
       meetingSchedule,
-
       tasks: {
         plannedToday: totalTasks,
         finishedYesterday: doneTasks,

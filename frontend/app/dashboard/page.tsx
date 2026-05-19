@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import {
   LineChart,
@@ -15,6 +15,7 @@ import {
 } from "recharts"
 
 export default function DashboardPage() {
+  const [hasPasskey, setHasPasskey] = useState(false)
   const router = useRouter()
 
   const [dashboardData, setDashboardData] = useState<any>(null)
@@ -29,6 +30,10 @@ export default function DashboardPage() {
         router.push("/login")
         return
       }
+
+      const passkeyRes = await fetch(`http://localhost:3000/passkey/status/${userId}`)
+      const passkeyData = await passkeyRes.json()
+      setHasPasskey(passkeyData.hasPasskey)
 
       const res = await fetch("http://localhost:3000/dashboard", {
         method: "POST",
@@ -51,14 +56,179 @@ export default function DashboardPage() {
     fetchDashboard()
   }, [router])
 
+  const normalizeStatus = (status: string) =>
+    String(status || "")
+      .toLowerCase()
+      .replaceAll("_", "")
+      .replaceAll("-", "")
+      .replaceAll(" ", "")
+
+  const ongoingProjects = useMemo(() => {
+    if (!dashboardData?.projects) return []
+
+    return dashboardData.projects.filter((project: any) => {
+      const status = normalizeStatus(project.status)
+      return status !== "completed" && status !== "done" && status !== "finished"
+    })
+  }, [dashboardData])
+
+  const filteredProjects = useMemo(() => {
+    if (!dashboardData?.projects) return []
+
+    return dashboardData.projects.filter((project: any) => {
+      const status = normalizeStatus(project.status)
+
+      if (activeTab === "ongoing") {
+        return status !== "completed" && status !== "done" && status !== "finished"
+      }
+
+      if (activeTab === "completed") {
+        return status === "completed" || status === "done" || status === "finished"
+      }
+
+      return true
+    })
+  }, [dashboardData, activeTab])
+
+  const contributionData = useMemo(() => {
+    if (!dashboardData?.user?.id) return []
+
+    const userId = dashboardData.user.id
+
+    return ongoingProjects
+      .map((project: any) => {
+        const userTasks =
+          project.tasks?.filter((task: any) => {
+            const assigneeId =
+              task.assigneeId ||
+              task.userId ||
+              task.memberId ||
+              task.assignee?.id ||
+              task.user?.id
+
+            return assigneeId === userId
+          }) || []
+
+        return {
+          name: project.name,
+          value: userTasks.length,
+        }
+      })
+      .filter((item: any) => item.value > 0)
+  }, [dashboardData, ongoingProjects])
+
+  const performanceData = useMemo(() => {
+    if (!dashboardData?.user?.id) return []
+
+    const userId = dashboardData.user.id
+
+    const monthMap: Record<string, { month: string; total: number; done: number }> = {}
+
+    ongoingProjects.forEach((project: any) => {
+      project.tasks?.forEach((task: any) => {
+        const assigneeId =
+          task.assigneeId ||
+          task.userId ||
+          task.memberId ||
+          task.assignee?.id ||
+          task.user?.id
+
+        if (assigneeId !== userId) return
+
+        const date = new Date(task.updatedAt || task.createdAt || project.lastActivity)
+
+        const month = date.toLocaleString("en-US", {
+          month: "short",
+        })
+
+        if (!monthMap[month]) {
+          monthMap[month] = {
+            month,
+            total: 0,
+            done: 0,
+          }
+        }
+
+        monthMap[month].total += 1
+
+        const status = normalizeStatus(task.status)
+
+        if (
+          status === "done" ||
+          status === "completed" ||
+          status === "finished"
+        ) {
+          monthMap[month].done += 1
+        }
+      })
+    })
+
+    return Object.values(monthMap).map((item) => ({
+      month: item.month,
+      performance:
+        item.total === 0 ? 0 : Math.round((item.done / item.total) * 100),
+    }))
+  }, [dashboardData, ongoingProjects])
+
   async function handleOpenProject(projectId: string, isMember: boolean) {
     if (!isMember) {
       alert("You are not part of this project")
       return
     }
 
-    // nanti biometric jalan di sini
-    router.push(`/dashboard/project/${projectId}`)
+    if (!hasPasskey) {
+      alert("Please setup biometric first")
+      router.push("/biometric/biometric_register")
+      return
+    }
+
+    try {
+      const { startAuthentication } = await import("@simplewebauthn/browser")
+
+      const userId = localStorage.getItem("userId")
+
+      const optionsRes = await fetch("http://localhost:3000/passkey/auth/options", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId }),
+        credentials: "include",
+      })
+
+      const optionsJSON = await optionsRes.json()
+      const authResponse = await startAuthentication(optionsJSON)
+
+      const verifyRes = await fetch("http://localhost:3000/passkey/auth/verify", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          userId,
+          response: authResponse,
+        }),
+      })
+
+      const result = await verifyRes.json()
+
+      if (result.verified) {
+        router.push(`/dashboard/project/${projectId}`)
+      } else {
+        alert("Biometric verification failed")
+      }
+    } catch (error) {
+      console.error(error)
+      alert("Biometric verification cancelled or failed")
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("token")
+    localStorage.removeItem("userId")
+
+    router.push("/login")
   }
 
   if (!dashboardData) {
@@ -69,10 +239,6 @@ export default function DashboardPage() {
     )
   }
 
-  const filteredProjects = dashboardData.projects.filter(
-    (project: any) => project.status === activeTab
-  )
-
   const colors = ["#7ed6c1", "#ff7675", "#555", "#f6c56f"]
 
   return (
@@ -81,7 +247,7 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-[220px_1fr_280px] bg-[#f7f7f7] rounded-sm overflow-hidden min-h-[720px]">
         <aside className="bg-white border-r p-8 flex flex-col items-center">
-          <h1 className="text-xl font-bold mb-16 text-black">LOGO</h1>
+          <h1 className="text-xl font-bold mb-10 text-black">ORCHESTRA</h1>
 
           <div className="w-20 h-20 bg-gray-300 rounded-full mb-3" />
 
@@ -89,7 +255,7 @@ export default function DashboardPage() {
             {dashboardData.user.name}
           </h2>
 
-          <p className="text-xs text-gray-500 mb-12">
+          <p className="text-xs text-gray-500 mb-8">
             {dashboardData.user.email}
           </p>
 
@@ -123,6 +289,13 @@ export default function DashboardPage() {
             >
               Setting
             </button>
+
+            <button
+              onClick={handleLogout}
+              className="block text-red-500 font-bold hover:text-red-700 mx-auto pt-2"
+            >
+              Logout
+            </button>
           </nav>
         </aside>
 
@@ -135,6 +308,15 @@ export default function DashboardPage() {
             Hello {dashboardData.user.name}, welcome back!
           </p>
 
+          {!hasPasskey && (
+            <button
+              onClick={() => router.push("/biometric/biometric_register")}
+              className="bg-black text-white px-4 py-2 rounded-lg mb-5"
+            >
+              Setup Biometric
+            </button>
+          )}
+
           <div className="grid grid-cols-2 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow-lg p-5">
               <h2 className="font-bold text-sm mb-3 text-black">
@@ -142,19 +324,25 @@ export default function DashboardPage() {
               </h2>
 
               <div className="h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={dashboardData.performanceData}>
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line
-                      type="monotone"
-                      dataKey="performance"
-                      stroke="#5b8def"
-                      strokeWidth={2}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {performanceData.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No task performance yet.
+                  </p>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={performanceData}>
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="performance"
+                        stroke="#5b8def"
+                        strokeWidth={2}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -164,36 +352,46 @@ export default function DashboardPage() {
               </h2>
 
               <div className="h-44 flex items-center">
-                <ResponsiveContainer width="55%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={dashboardData.contributionData}
-                      dataKey="value"
-                      nameKey="name"
-                      outerRadius={65}
-                    >
-                      {dashboardData.contributionData.map((_: any, index: number) => (
-                        <Cell
-                          key={index}
-                          fill={colors[index % colors.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                {contributionData.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    No ongoing task contribution yet.
+                  </p>
+                ) : (
+                  <>
+                    <ResponsiveContainer width="55%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={contributionData}
+                          dataKey="value"
+                          nameKey="name"
+                          outerRadius={65}
+                        >
+                          {contributionData.map((_: any, index: number) => (
+                            <Cell
+                              key={index}
+                              fill={colors[index % colors.length]}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
 
-                <div className="text-xs space-y-2 text-black">
-                  {dashboardData.contributionData.map((item: any, index: number) => (
-                    <p key={item.name}>
-                      <span
-                        className="inline-block w-3 h-3 rounded-full mr-2"
-                        style={{ backgroundColor: colors[index % colors.length] }}
-                      />
-                      {item.name}
-                    </p>
-                  ))}
-                </div>
+                    <div className="text-xs space-y-2 text-black">
+                      {contributionData.map((item: any, index: number) => (
+                        <p key={item.name}>
+                          <span
+                            className="inline-block w-3 h-3 rounded-full mr-2"
+                            style={{
+                              backgroundColor: colors[index % colors.length],
+                            }}
+                          />
+                          {item.name} ({item.value})
+                        </p>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -271,11 +469,12 @@ export default function DashboardPage() {
                   </p>
 
                   <div className="flex justify-between text-sm text-black mt-2">
-                    <p>
-                      Progress: {project.progress}%
-                    </p>
+                    <p>Progress: {project.progress}%</p>
+
                     <p className="font-bold text-xs">
-                      *You are part of this project*
+                      {project.isMember
+                        ? "*You are part of this project*"
+                        : "*You are not part of this project*"}
                     </p>
                   </div>
                 </div>
@@ -367,4 +566,5 @@ export default function DashboardPage() {
       </div>
     </div>
   )
+  
 }

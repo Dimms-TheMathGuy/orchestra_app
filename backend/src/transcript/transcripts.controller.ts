@@ -15,16 +15,5 @@ export class TranscriptsController {
     getTranscript(@Param('meetingId') id: string) {
         return this.transcriptsService.findByMeeting(id)
     }
-  @Post()
-  upload(@Body() body) {
-    return this.transcriptsService.upload(
-      body.meetingId, // sekarang STRING
-      body.text
-    )
-  }
 
-  @Get(':meetingId')
-  getTranscript(@Param('meetingId') id: string) {
-    return this.transcriptsService.findByMeeting(id)
-  }
 }
