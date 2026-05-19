@@ -348,7 +348,9 @@ export default function DashboardPage() {
                       Progress: {project.progress}%
                     </p>
                     <p className="font-bold text-xs">
-                      *You are part of this project*
+                      {project.isMember
+                        ? "*You are part of this project*"
+                        : "*You are not part of this project*"}
                     </p>
                   </div>
                 </div>

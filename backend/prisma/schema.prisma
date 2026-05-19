@@ -32,6 +32,8 @@ model User {
 
   passkeys Passkey[]
   currentChallenge String?
+
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Project {
@@ -197,4 +199,15 @@ model Transcript {
   createdAt DateTime @default(now())
 
   meeting   MeetingLog @relation(fields: [meetingId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
