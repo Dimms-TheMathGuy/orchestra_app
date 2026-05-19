@@ -22,18 +22,6 @@ export class DashboardService {
     }
 
     const projectsRaw = await this.prisma.project.findMany({
-      where: {
-        OR: [
-          { ownerId: userId },
-          {
-            members: {
-              some: {
-                userId,
-              },
-            },
-          },
-        ],
-      },
       include: {
         owner: {
           select: {
@@ -75,6 +63,9 @@ export class DashboardService {
         },
         taskBranchSyncs: true,
       },
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
 
     const projects = projectsRaw.map((project) => {
@@ -91,14 +82,16 @@ export class DashboardService {
         (member) => member.userId === userId,
       );
 
+      const isMember = project.ownerId === userId || !!currentMember;
+
       return {
         id: project.id,
         name: project.name,
         description: project.description,
         status: project.status,
         progress,
-        isMember: project.ownerId === userId || !!currentMember,
-        role: project.ownerId === userId ? 'owner' : currentMember?.role,
+        isMember,
+        role: project.ownerId === userId ? 'owner' : currentMember?.role ?? null,
         leader: project.owner,
         members: project.members.map((m) => m.user),
         lastActivity:
@@ -162,7 +155,6 @@ export class DashboardService {
 
     return {
       user,
-
       performanceData: [
         {
           month: 'Projects',
@@ -185,15 +177,10 @@ export class DashboardService {
           performance: doneTasks,
         },
       ],
-
       contributionData,
-
       projects,
-
       ongoingMeeting,
-
       meetingSchedule,
-
       tasks: {
         plannedToday: totalTasks,
         finishedYesterday: doneTasks,
