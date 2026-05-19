@@ -62,9 +62,12 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <p className="text-sm text-gray-500 mb-4 cursor-pointer">
+        <Link
+          href="/forgot-password"
+          className="block text-sm text-gray-500 mb-4 cursor-pointer underline"
+        >
           Forgot password?
-        </p>
+        </Link>
 
         <p className="text-sm text-gray-500 mb-4">
           Don&apos;t have an account?

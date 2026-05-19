@@ -51,13 +51,8 @@ export class SummariesService {
 
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
 
-<<<<<<< HEAD
-        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(fullText, schemaContext);
-        const draftBatchId = Date.now();
-=======
         const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(transcript.text, schemaContext);
         const draftBatchId = Date.now();  // log waktu batch dari draft dibuat pertama kali
->>>>>>> biometric
 
         const meetingDrafts: MeetingDraft[] = generatedDrafts.map((draft, index) => ({
             draftId: `${draftBatchId}-${index}`,

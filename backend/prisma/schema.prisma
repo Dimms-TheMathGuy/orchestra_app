@@ -32,6 +32,8 @@ model User {
 
   passkeys Passkey[]
   currentChallenge String?
+
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Project {
@@ -191,8 +193,8 @@ model Passkey {
   id           String   @id @default(cuid())
   userId       String
   credentialId String   @unique
-  publicKey    Bytes
-  counter      Int
+  publicKey    String
+  counter      Int      @default(0)
   transports   String?
   createdAt    DateTime @default(now())
 

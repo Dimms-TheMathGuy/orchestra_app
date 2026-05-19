@@ -14,12 +14,8 @@ import { SummariesModule } from './summaries/summaries.module';
 import { MeetingsModule } from './meetings/meetings.module';
 import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
-<<<<<<< HEAD
-import { TranscriptsModule } from './transcript/transcripts.module';
-=======
 import { PasskeyModule } from './passkey/passkey.module';
 import { DashboardModule } from './dashboard/dashboard.module';
->>>>>>> biometric
 
 @Module({
   imports: [
@@ -30,10 +26,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
     AuthModule,
     UserModule,
     NotionModule,
-<<<<<<< HEAD
     GithubModule, 
     TranscriptsModule,
-=======
     GithubModule,
     TranscriptsModule,
     SummariesModule,
@@ -41,7 +35,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ZoomModule,
     PasskeyModule,
     DashboardModule,
->>>>>>> biometric
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],
