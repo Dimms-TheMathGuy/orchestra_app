@@ -147,7 +147,6 @@ model GithubActivity {
   @@unique([repoId, githubId, type])
 }
 
-<<<<<<< HEAD
 model Transcript {
   id        String   @id @default(uuid())
   meetingId String
@@ -155,7 +154,8 @@ model Transcript {
   createdAt DateTime @default(now())
 
   meeting   MeetingLog @relation(fields: [meetingId], references: [id])
-=======
+}
+
 enum SyncState {
   LINKED
   IN_PROGRESS
@@ -199,5 +199,4 @@ model Passkey {
   createdAt    DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
->>>>>>> biometric
 }
