@@ -147,15 +147,6 @@ model GithubActivity {
   @@unique([repoId, githubId, type])
 }
 
-model Transcript {
-  id        String   @id @default(uuid())
-  meetingId String
-  text      String
-  createdAt DateTime @default(now())
-
-  meeting   MeetingLog @relation(fields: [meetingId], references: [id])
-}
-
 enum SyncState {
   LINKED
   IN_PROGRESS
@@ -198,5 +189,25 @@ model Passkey {
   transports   String?
   createdAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transcript {
+  id        String   @id @default(uuid())
+  meetingId String
+  text      String
+  createdAt DateTime @default(now())
+
+  meeting   MeetingLog @relation(fields: [meetingId], references: [id])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
