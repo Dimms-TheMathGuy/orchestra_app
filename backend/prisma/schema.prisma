@@ -70,19 +70,6 @@ model ProjectMember {
   @@unique([userId, projectId])
 }
 
-model ProjectMessage {
-  id        String   @id @default(uuid())
-  projectId String
-  senderId  String
-  content   String
-  iv        String
-  isSystem  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id])
-  sender  User    @relation(fields: [senderId], references: [id])
-}
-
 model MeetingLog {
   id            String   @id @default(uuid())
   projectId     String
@@ -210,4 +197,54 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProjectMessage {
+  id          String   @id @default(uuid())
+  projectId   String
+  senderId    String
+  content     String
+  iv          String
+  isSystem    Boolean  @default(false)
+  replyToId   String?
+  editedAt    DateTime?
+  deletedAt   DateTime?
+  createdAt   DateTime @default(now())
+
+  project     Project  @relation(fields: [projectId], references: [id])
+  sender      User     @relation(fields: [senderId], references: [id])
+  
+  replyTo     ProjectMessage?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     ProjectMessage[] @relation("MessageReplies")
+
+  reads       MessageRead[]
+  attachments MessageAttachment[]
+}
+
+model MessageRead {
+  id          String   @id @default(uuid())
+
+  messageId   String
+  userId      String
+
+  readAt      DateTime @default(now())
+
+  message     ProjectMessage @relation(fields: [messageId], references: [id])
+  user        User           @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model MessageAttachment {
+  id          String   @id @default(uuid())
+
+  messageId   String
+
+  fileUrl     String
+  fileType    String
+  fileName    String
+
+  createdAt   DateTime @default(now())
+
+  message     ProjectMessage @relation(fields: [messageId], references: [id])
 }
