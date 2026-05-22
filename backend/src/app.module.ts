@@ -18,6 +18,7 @@ import { PasskeyModule } from './passkey/passkey.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ProjectsModule } from './projects/projects.module';
 import { MeetingReviewModule } from './meeting-review/meeting-review.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { MeetingReviewModule } from './meeting-review/meeting-review.module';
     DashboardModule,
     ProjectsModule,
     MeetingReviewModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

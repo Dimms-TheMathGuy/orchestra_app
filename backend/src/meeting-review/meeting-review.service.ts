@@ -233,7 +233,7 @@ export class MeetingReviewService {
     }
 
     const parsed = Number(zoomMeetingId);
-    return Number.isFinite(parsed) ? parsed : null;
+    return Number.isFinite(parsed) ? zoomMeetingId : null;
   }
 
   private countPending(drafts: SummaryDraft[], project: MeetingReviewProject) {
