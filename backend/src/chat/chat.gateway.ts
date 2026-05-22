@@ -31,8 +31,6 @@ export class ChatGateway {
   }
 
   sendNewMessage(projectId: string, message: any) {
-    this.server
-      .to(`project:${projectId}`)
-      .emit('new_message', message)
+    this.server.to(`project:${projectId}`).emit('new_message', message)
   }
 }

@@ -8,9 +8,10 @@ export class ChatController {
 
   @Get()
   async getMessages(
-    @Param('projectId') projectId: string
+    @Param('projectId') projectId: string,
+    @Req() req: any
   ) {
-    const userId = '456f650f-195a-4fe2-b4ae-851b6847cf4d'
+    const userId = req.user?.id 
 
     return this.chatService.getMessages(
       projectId,
@@ -21,9 +22,11 @@ export class ChatController {
   @Post()
   async sendMessage(
     @Param('projectId') projectId: string,
-    @Body('content') content: string
+    @Body('content') content: string,
+    @Req() req: any
   ) {
-    const userId = '1bf51b2c-cb14-44f7-b5f5-ef6faaf227ee'
+    
+    const userId = req.user?.id 
 
     return this.chatService.sendMessage(
       projectId,
