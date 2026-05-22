@@ -270,7 +270,7 @@ export default function DashboardPage() {
             </button>
 
             <button
-              onClick={() => router.push("/dashboard/add-project")}
+              onClick={() => router.push("/add-project")}
               className="block text-gray-500 hover:text-black mx-auto"
             >
               Add Project
