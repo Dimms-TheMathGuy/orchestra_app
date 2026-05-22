@@ -41,12 +41,14 @@ export class SummariesService {
 
     async generate(meetingId: string, blockId: string) {
 
-        const transcript = await this.transcripts.findByMeeting(String(meetingId));
-        if (!transcript) {
+        const transcripts = await this.transcripts.findByMeeting(String(meetingId));
+        if (!transcripts) {
             return { error: "Transcript not found" }
         }
 
-        const fullText = transcript.map(t => t.text).join("\n");
+        const fullText = Array.isArray(transcripts)
+            ? transcripts.map(t => t.text).join("\n")
+            : transcripts.text;
 
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
 

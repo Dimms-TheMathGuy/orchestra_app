@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,46 +8,43 @@ datasource db {
 }
 
 model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String
-  name       String
-  company    String?
-  avatarUrl  String?
-  googleId   String?
-  createdAt  DateTime @default(now())
-
-  projectsOwned    Project[]       @relation("ProjectOwner")
-  memberships      ProjectMember[]
-  messages         ProjectMessage[]
-  githubId         Int? @unique
-  githubUsername   String?
-  githubToken      String?
-
-  passkeys Passkey[]
-  currentChallenge String?
-
+  id                  String               @id @default(uuid())
+  email               String               @unique
+  password            String
+  name                String
+  avatarUrl           String?
+  googleId            String?
+  createdAt           DateTime             @default(now())
+  githubToken         String?
+  githubUsername      String?
+  company             String?
+  githubId            Int?                 @unique
+  currentChallenge    String?
+  messageReads        MessageRead[]
+  passkeys            Passkey[]
   passwordResetTokens PasswordResetToken[]
+  projectsOwned       Project[]            @relation("ProjectOwner")
+  memberships         ProjectMember[]
+  messages            ProjectMessage[]
 }
 
 model Project {
-  id            String   @id @default(uuid())
-  name          String
-  description   String?
-  ownerId       String
-  status        String   @default("ongoing")
-  createdAt     DateTime @default(now())
-  notionDbId    String?
-  notionSchema  Json?
-  zoomMeetingId String?
-
-  owner        User               @relation("ProjectOwner", fields: [ownerId], references: [id])
-  members      ProjectMember[]
-  messages     ProjectMessage[]
-  meetings     MeetingLog[]
-  repositories ProjectRepository[]
-  branches     GithubBranchLink[]
-  activities   GithubActivity[]
+  id              String              @id @default(uuid())
+  name            String
+  description     String?
+  ownerId         String
+  createdAt       DateTime            @default(now())
+  notionDbId      String?
+  notionSchema    Json?
+  zoomMeetingId   String?
+  status          String              @default("ongoing")
+  activities      GithubActivity[]
+  branches        GithubBranchLink[]
+  meetings        MeetingLog[]
+  owner           User                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members         ProjectMember[]
+  messages        ProjectMessage[]
+  repositories    ProjectRepository[]
   taskBranchSyncs TaskBranchSync[]
 }
 
@@ -63,28 +54,14 @@ model ProjectMember {
   projectId String
   role      String
   joinedAt  DateTime @default(now())
-
-  user    User    @relation(fields: [userId], references: [id])
-  project Project @relation(fields: [projectId], references: [id])
+  project   Project  @relation(fields: [projectId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, projectId])
 }
 
-model ProjectMessage {
-  id        String   @id @default(uuid())
-  projectId String
-  senderId  String
-  content   String
-  iv        String
-  isSystem  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id])
-  sender  User    @relation(fields: [senderId], references: [id])
-}
-
 model MeetingLog {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   projectId     String
   zoomMeetingId String
   topic         String?
@@ -93,91 +70,77 @@ model MeetingLog {
   aiSummary     String?
   actionItems   Json?
   status        String?
-  createdAt     DateTime @default(now())
-
-  project Project @relation(fields: [projectId], references: [id])
-  transcripts Transcript[] 
+  createdAt     DateTime     @default(now())
+  project       Project      @relation(fields: [projectId], references: [id])
+  transcripts   Transcript[]
 }
 
 model ProjectRepository {
-  id            String   @id @default(uuid())
-  projectId     String
-  githubOwner   String
-  githubRepo    String
-  githubUrl     String
-  webhookSecret String?
-  createdAt     DateTime @default(now())
-
-  project   Project            @relation(fields: [projectId], references: [id])
-  branches  GithubBranchLink[]
-  activities GithubActivity[]   
+  id              String             @id @default(uuid())
+  projectId       String
+  githubOwner     String
+  githubRepo      String
+  githubUrl       String
+  webhookSecret   String?
+  createdAt       DateTime           @default(now())
+  activities      GithubActivity[]
+  branches        GithubBranchLink[]
+  project         Project            @relation(fields: [projectId], references: [id])
   taskBranchSyncs TaskBranchSync[]
 }
 
 model GithubBranchLink {
-  id           String   @id @default(uuid())
+  id           String            @id @default(uuid())
   projectId    String
-  repoId       String 
+  repoId       String
   branchName   String
   notionTaskId String?
-  prNumber     Int? 
+  prNumber     Int?
   prUrl        String?
   status       String?
-  updatedAt    DateTime @updatedAt
-
-  project Project            @relation(fields: [projectId], references: [id])
-  repo    ProjectRepository  @relation(fields: [repoId], references: [id])
+  updatedAt    DateTime          @updatedAt
+  project      Project           @relation(fields: [projectId], references: [id])
+  repo         ProjectRepository @relation(fields: [repoId], references: [id])
 }
 
 model GithubActivity {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   projectId   String
   repoId      String
-  type        String      // commit/pr/issue/ merge
-  githubId    String?     // commit SHA /PR ID/issue ID
+  type        String
+  githubId    String?
   title       String
   description String?
   author      String
   url         String
   createdAt   DateTime
-
-  project Project            @relation(fields: [projectId], references: [id])
-  repo    ProjectRepository  @relation(fields: [repoId], references: [id])
+  project     Project           @relation(fields: [projectId], references: [id])
+  repo        ProjectRepository @relation(fields: [repoId], references: [id])
 
   @@unique([repoId, githubId, type])
 }
 
-enum SyncState {
-  LINKED
-  IN_PROGRESS
-  IN_REVIEW
-  DONE
-  CANCELLED
-}
-
 model TaskBranchSync {
-  id          String  @id @default(uuid())
-  projectId   String
-  notionTaskPageId  String 
-  notionDatabaseId  String
+  id                     String            @id @default(uuid())
+  projectId              String
+  notionTaskPageId       String            @unique
+  notionDatabaseId       String
+  repoId                 String
+  branchName             String
+  prNumber               Int?
+  syncState              SyncState
+  latestRepoChange       DateTime?
+  lastSyncedAt           DateTime?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
   completionPropertyName String
   completionPropertyType String
-  completionValue Json
-  repoId      String
-  branchName   String
-  targetBranch String @default("main")
-  prNumber    Int?
-  syncState   SyncState
-  latestRepoChange  DateTime?
-  lastSyncedAt  DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  completionValue        Json
+  targetBranch           String            @default("main")
+  project                Project           @relation(fields: [projectId], references: [id])
+  repo                   ProjectRepository @relation(fields: [repoId], references: [id])
 
-  project Project            @relation(fields: [projectId], references: [id])
-  repo  ProjectRepository @relation(fields: [repoId], references: [id])
-  
   @@unique([repoId, branchName])
-  @@unique([notionTaskPageId])
 }
 
 model Passkey {
@@ -186,18 +149,16 @@ model Passkey {
   credentialId String   @unique
   publicKey    String
   counter      Int      @default(0)
-  transports   String?
   createdAt    DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transports   String?
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Transcript {
-  id        String   @id @default(uuid())
+  id        String     @id @default(uuid())
   meetingId String
   text      String
-  createdAt DateTime @default(now())
-
+  createdAt DateTime   @default(now())
   meeting   MeetingLog @relation(fields: [meetingId], references: [id])
 }
 
@@ -208,6 +169,53 @@ model PasswordResetToken {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ProjectMessage {
+  id          String              @id @default(uuid())
+  projectId   String
+  senderId    String
+  content     String
+  iv          String
+  isSystem    Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  deletedAt   DateTime?
+  editedAt    DateTime?
+  replyToId   String?
+  attachments MessageAttachment[]
+  reads       MessageRead[]
+  project     Project             @relation(fields: [projectId], references: [id])
+  replyTo     ProjectMessage?     @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies     ProjectMessage[]    @relation("MessageReplies")
+  sender      User                @relation(fields: [senderId], references: [id])
+}
+
+model MessageRead {
+  id        String         @id @default(uuid())
+  messageId String
+  userId    String
+  readAt    DateTime       @default(now())
+  message   ProjectMessage @relation(fields: [messageId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+}
+
+model MessageAttachment {
+  id        String         @id @default(uuid())
+  messageId String
+  fileUrl   String
+  fileType  String
+  fileName  String
+  createdAt DateTime       @default(now())
+  message   ProjectMessage @relation(fields: [messageId], references: [id])
+}
+
+enum SyncState {
+  LINKED
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+  CANCELLED
 }
