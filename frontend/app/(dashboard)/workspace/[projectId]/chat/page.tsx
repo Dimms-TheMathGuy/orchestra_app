@@ -69,8 +69,7 @@ export default function ProjectChat() {
   return (
     <div className="flex h-full min-h-[calc(100vh-4rem)] flex-col p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">chat</h1>
-        <p className="text-muted-foreground">Project discussion and team updates</p>
+        <h1 className="text-3xl font-bold mb-2">Chat</h1>
       </div>
 
       <div className="flex-1 overflow-hidden rounded-lg border border-border bg-card shadow-md">

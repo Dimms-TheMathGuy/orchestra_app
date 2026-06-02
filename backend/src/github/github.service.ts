@@ -32,6 +32,8 @@ export class GithubService {
     }
 
     const secret = crypto.randomBytes(20).toString('hex');
+    
+    console.log('Webhook URL:', webhookUrl);
 
     await axios.post(
       `https://api.github.com/repos/${repo.owner.login}/${repo.name}/hooks`,
