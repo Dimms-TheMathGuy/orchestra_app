@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Req, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, Req, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
 import crypto from 'crypto';
@@ -74,17 +74,45 @@ export class GithubService {
     });
   }
 
-  async sync() {
-    const repos = await this.prisma.projectRepository.findMany({
-      include: { project: true }
+  async syncProject(projectId: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        ],
+      },
+      include: {
+        owner: true,
+        repositories: true,
+      },
     })
 
-    for (const repo of repos) {
+    if (!project) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    if (!project.owner.githubToken) {
+      throw new BadRequestException('Project owner has not connected GitHub');
+    }
+
+    if (project.repositories.length === 0) {
+      return { message: 'No repositories linked to this project' };
+    }
+
+    for (const repo of project.repositories) {
       const response = await axios.get(
         `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits`,
         {
           headers: {
-            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            Authorization: `Bearer ${project.owner.githubToken}`,
             Accept: 'application/vnd.github+json'
           }
         }

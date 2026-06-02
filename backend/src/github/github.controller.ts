@@ -1,8 +1,10 @@
-import { Controller, Get, Post, Body, Req, Param, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Req, Param, Headers, BadRequestException, UseGuards } from '@nestjs/common';
 import { GithubService } from './github.service';
 import type { Request } from 'express';
 import { linkTaskBranchSchema } from './dto/link-task-branch.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('api/github')
 export class GithubController {
 
@@ -62,9 +64,9 @@ export class GithubController {
     return this.githubService.getActivities(projectId);
   }
 
-  @Post('sync')
-  sync() {
-    return this.githubService.sync();
+  @Post('projects/:projectId/sync')
+  syncProject(@Param('projectId') projectId: string, @Req() req: any) {
+    return this.githubService.syncProject(projectId, req.user.id);
   }
 
   @Post('webhook')

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, Res, Req } from '@nestjs/common';
+import { BadRequestException, Controller, Post, Body, Get, Query, Res, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import type { Response, Request } from 'express';
@@ -25,11 +25,16 @@ export class AuthController {
   }
 
   @Get('github')
-  redirectToGithub(@Res() res: Response) {
+  redirectToGithub(@Query('userId') userId: string, @Res() res: Response) {
+    if (!userId) {
+      throw new BadRequestException('userId is required');
+    }
+
     const url =
       `https://github.com/login/oauth/authorize` +
       `?client_id=${process.env.GITHUB_CLIENT_ID}` +
-      `&scope=repo,admin:repo_hook,read:user`;
+      `&scope=repo,admin:repo_hook,read:user` +
+      `&state=${encodeURIComponent(userId)}`;
 
     return res.redirect(url);
   }
@@ -37,9 +42,14 @@ export class AuthController {
   @Get('github/callback')
   async githubCallback(
     @Query('code') code: string,
+    @Query('state') userId: string,
     @Res() res: Response,
     @Req() req: Request,
   ) {
+    if (!userId) {
+      throw new BadRequestException('Missing GitHub OAuth state');
+    }
+
     const tokenResponse = await axios.post(
       'https://github.com/login/oauth/access_token',
       {
@@ -62,18 +72,17 @@ export class AuthController {
     );
 
     const githubUser = userResponse.data;
-    const currentUserId = (req as any).user.id;
 
     await this.prisma.user.update({
-      where: { id: currentUserId }, 
+      where: { id: userId }, 
       data: {
-        githubId: githubUser.id.toString(),
+        githubId: Number(githubUser.id),
         githubUsername: githubUser.login,
         githubToken: accessToken,
       },
     });
 
-    return res.send('GitHub connected successfully');
+    return res.redirect('http://localhost:3001/dashboard/settings?github=connected');
   }
 
   @Post('forgot-password')

@@ -49,7 +49,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new Error('Email already registered');
+      throw new BadRequestException('Email already registered');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -62,9 +62,20 @@ export class AuthService {
       },
     });
 
+    const payload = {
+      sub: user.id,
+      email: user.email,
+    };
+
+    const token = await this.jwtService.signAsync(payload);
+
     return {
-      message: 'User registered successfully',
-      userId: user.id,
+      access_token: token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
     };
   }
 

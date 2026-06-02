@@ -30,6 +30,21 @@ export class ProjectsService {
         },
       });
 
+      const memberIds = [...new Set(dto.memberIds ?? [])].filter(
+        (memberId) => memberId !== userId,
+      );
+
+      if (memberIds.length > 0) {
+        await tx.projectMember.createMany({
+          data: memberIds.map((memberId) => ({
+            userId: memberId,
+            projectId: createdProject.id,
+            role: 'MEMBER',
+          })),
+          skipDuplicates: true,
+        });
+      }
+
       return createdProject;
     });
 
@@ -142,6 +157,73 @@ export class ProjectsService {
     return this.toProjectResponse(project);
   }
 
+  async updateStatus(
+    projectId: string,
+    userId: string,
+    status: string,
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: {
+        id: projectId,
+      },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    if (project.ownerId !== userId) {
+      throw new ForbiddenException(
+        'Only the owner can change project status',
+      );
+    }
+
+    return this.prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        status,
+      },
+    });
+  }
+
+  async deleteProject(
+    projectId: string,
+    userId: string,
+  ) {
+    const project = await this.findProjectById(
+      projectId,
+      userId,
+    );
+
+    return this.prisma.project.delete({
+      where: {
+        id: project.id,
+      },
+    });
+  }
+
+  async connectNotion(
+    projectId: string,
+    userId: string,
+    databaseId: string,
+  ) {
+    await this.findProjectById(
+      projectId,
+      userId,
+    );
+
+    return this.prisma.project.update({
+      where: {
+        id: projectId,
+      },
+      data: {
+        notionDbId: databaseId,
+      },
+    });
+  }
+
   private toProjectResponse(project: any) {
     const memberCount = project.members.length;
 
@@ -149,6 +231,7 @@ export class ProjectsService {
       id: project.id,
       name: project.name,
       description: project.description,
+      status: project.status,
       ownerId: project.ownerId,
       createdAt: project.createdAt,
       owner: project.owner,

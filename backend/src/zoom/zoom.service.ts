@@ -106,6 +106,7 @@ export class ZoomService {
             start_time: meeting.start_time,
             duration: meeting.duration,
             join_url: meeting.join_url,
+            password: meeting.password,
             agenda: meeting.agenda,
         };
     }
@@ -119,6 +120,7 @@ export class ZoomService {
             start_time: m.start_time,
             duration: m.duration,
             join_url: m.join_url,
+            password: m.password,
         }));
     }
 

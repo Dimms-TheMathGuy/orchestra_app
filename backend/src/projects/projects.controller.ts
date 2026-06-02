@@ -2,8 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -49,5 +51,42 @@ export class ProjectsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.projectsService.findProjectById(projectId, req.user.id);
+  }
+
+  @Patch(':projectId/status')
+  updateStatus(
+    @Param('projectId') projectId: string,
+    @Body() body: { status: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.updateStatus(
+      projectId,
+      req.user.id,
+      body.status,
+    );
+  }
+
+  @Delete(':projectId')
+  deleteProject(
+    @Param('projectId') projectId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.deleteProject(
+      projectId,
+      req.user.id,
+    );
+  }
+
+  @Post(':projectId/notion')
+  connectNotion(
+    @Param('projectId') projectId: string,
+    @Body() body: { databaseId: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.connectNotion(
+      projectId,
+      req.user.id,
+      body.databaseId,
+    );
   }
 }

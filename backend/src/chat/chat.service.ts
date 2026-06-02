@@ -22,15 +22,34 @@ export class ChatService {
     }
   }
 
-  async getMessages(projectId: string, userId: string) {
-
-    const member = await this.prisma.projectMember.findFirst({
-      where: { projectId, userId }
+  private async ensureProjectAccess(projectId: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [
+          { ownerId: userId },
+          {
+            members: {
+              some: {
+                userId,
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+      },
     })
 
-    if (!member) {
+    if (!project) {
       throw new ForbiddenException('Not a project member')
     }
+  }
+
+  async getMessages(projectId: string, userId: string) {
+
+    await this.ensureProjectAccess(projectId, userId)
 
     const messages = await this.prisma.projectMessage.findMany({
       where: { projectId },
@@ -50,13 +69,7 @@ export class ChatService {
 
   async sendMessage(projectId: string, userId: string, content: string) {
 
-    const member = await this.prisma.projectMember.findFirst({
-      where: { projectId, userId }
-    })
-
-    if (!member) {
-      throw new ForbiddenException('Not a project member')
-    }
+    await this.ensureProjectAccess(projectId, userId)
 
     const encrypted = encrypt(content)
 
