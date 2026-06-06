@@ -2,13 +2,13 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { ConfigService } from '@nestjs/config';
 import { Client, GetDatabaseResponse } from '@notionhq/client';
 
-type GeminiPropertySummary = {
+export type GeminiPropertySummary = {
     name: string;
     type: string;
     options?: string[];
 };
 
-type GeminiDatabaseContext = {
+export type GeminiDatabaseContext = {
     databaseId: string;
     title: string;
     properties: GeminiPropertySummary[];
@@ -95,6 +95,71 @@ export class NotionService {
         const schemasContext = await this.fetchAllDatabaseSchema(databaseIds);
 
         return schemasContext;
+    }
+
+    // Types that require Notion user IDs — cannot be set from plain text, skip them
+    private readonly UNSUPPORTED_TYPES = new Set(['people', 'files', 'relation', 'rollup', 'formula', 'created_by', 'last_edited_by', 'created_time', 'last_edited_time']);
+
+    buildPropertyPayload(propertyType: string, value: unknown): Record<string, unknown> | null {
+        if (this.UNSUPPORTED_TYPES.has(propertyType)) return null;
+
+        // If value is already Notion-native format, pass through
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            const keys = Object.keys(value as Record<string, unknown>);
+            const notionTypeKeys = ['title', 'rich_text', 'number', 'date', 'select', 'multi_select', 'status', 'checkbox', 'url', 'email', 'phone_number'];
+            if (keys.length > 0 && notionTypeKeys.includes(keys[0])) {
+                return value as Record<string, unknown>;
+            }
+        }
+
+        switch (propertyType) {
+            case 'title':
+                return { title: [{ text: { content: String(value ?? '') } }] };
+            case 'rich_text':
+                return { rich_text: [{ text: { content: String(value ?? '') } }] };
+            case 'number':
+                return { number: Number(value) || 0 };
+            case 'date':
+                return { date: { start: String(value ?? '') } };
+            case 'select':
+                return { select: { name: String(value ?? '') } };
+            case 'multi_select': {
+                const items = Array.isArray(value) ? value : String(value ?? '').split(',').map(s => s.trim()).filter(Boolean);
+                return { multi_select: items.map((name: string) => ({ name: String(name) })) };
+            }
+            case 'status':
+                return { status: { name: String(value ?? '') } };
+            case 'checkbox':
+                return { checkbox: Boolean(value) };
+            case 'url':
+                return { url: String(value ?? '') };
+            case 'email':
+                return { email: String(value ?? '') };
+            case 'phone_number':
+                return { phone_number: String(value ?? '') };
+            default:
+                return { rich_text: [{ text: { content: String(value ?? '') } }] };
+        }
+    }
+
+    convertDraftProperties(
+        rawProperties: Record<string, unknown>,
+        schema: GeminiPropertySummary[],
+    ): Record<string, unknown> {
+        const converted: Record<string, unknown> = {};
+        const schemaMap = new Map(schema.map(p => [p.name, p.type]));
+
+        for (const [propName, propValue] of Object.entries(rawProperties)) {
+            const propType = schemaMap.get(propName);
+            if (!propType) continue; // skip properties not in schema (AI hallucinations)
+            const payload = this.buildPropertyPayload(propType, propValue);
+            if (payload !== null) {
+                converted[propName] = payload;
+            }
+            // null = unsupported type (e.g. people) — silently skip
+        }
+
+        return converted;
     }
 
     async createPage(databaseId: string, properties: any) {

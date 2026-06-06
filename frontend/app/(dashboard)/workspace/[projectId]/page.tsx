@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { GitBranch, Video, Calendar, Users, ExternalLink, Sparkles, RefreshCw, Plus } from 'lucide-react'
+import { GitBranch, Video, Calendar, Users, ExternalLink, Sparkles, RefreshCw, Plus, UserPlus, Trash2 } from 'lucide-react'
 import { get, patch, post } from '@/app/lib/api'
 import { Button } from '@/app/components/ui/button'
-import { Textarea } from '@/app/components/ui/textarea'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Input } from '@/app/components/ui/input'
+
+interface ProjectRepository {
+  id: string
+  githubOwner: string
+  githubRepo: string
+  githubUrl: string
+}
 
 interface Project {
   status: string
@@ -16,7 +23,7 @@ interface Project {
   name: string
   description: string
   notionDbId?: string
-  githubRepository?: string
+  repositories?: ProjectRepository[]
   members?: {
     id: string
     role: string
@@ -59,12 +66,12 @@ export default function Workspace() {
   const [notionDbId, setNotionDbId] = useState('')
   const [activities, setActivities] = useState<GitActivity[]>([])
   const [meetings, setMeetings] = useState<Meeting[]>([])
-  const [geminiResponse, setGeminiResponse] = useState('')
-  const [geminiPrompt, setGeminiPrompt] = useState('')
   const [activeZoomUrl, setActiveZoomUrl] = useState('')
   const [creatingMeeting, setCreatingMeeting] = useState(false)
   const [syncingGithub, setSyncingGithub] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [memberEmail, setMemberEmail] = useState('')
+  const [addingMember, setAddingMember] = useState(false)
 
   useEffect(() => {
     if (projectId) {
@@ -141,32 +148,6 @@ export default function Workspace() {
       toast.error(error instanceof Error ? error.message : 'Failed to create Zoom meeting')
     } finally {
       setCreatingMeeting(false)
-    }
-  }
-
-  const handleNotionSync = async () => {
-    try {
-      await post(`/projects/${projectId}/sync-notion`, {})
-      toast.success('Synced with Notion database!')
-      fetchProjectData()
-    } catch (error) {
-      toast.error('Failed to sync with Notion')
-    }
-  }
-
-  const handleGeminiQuery = async () => {
-    if (!geminiPrompt.trim()) {
-      toast.error('Please enter a prompt')
-      return
-    }
-    try {
-      const response = await post('/gemini/query', {
-        projectId,
-        prompt: geminiPrompt,
-      })
-      setGeminiResponse(response.response)
-    } catch (error) {
-      toast.error('Failed to query Gemini')
     }
   }
 
@@ -251,6 +232,35 @@ export default function Workspace() {
     }
   }
 
+  const handleAddMember = async () => {
+    if (!memberEmail.trim()) return
+    setAddingMember(true)
+    try {
+      await post(`/projects/${projectId}/members`, { email: memberEmail.trim() })
+      toast.success(`${memberEmail} added to project`)
+      setMemberEmail('')
+      fetchProjectData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add member')
+    } finally {
+      setAddingMember(false)
+    }
+  }
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!confirm(`Remove ${memberName} from project?`)) return
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/projects/${projectId}/members/${memberId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      })
+      toast.success(`${memberName} removed`)
+      fetchProjectData()
+    } catch {
+      toast.error('Failed to remove member')
+    }
+  }
+
   if (loading) {
     return (
       <div className="p-8 text-center">
@@ -300,35 +310,34 @@ export default function Workspace() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-card rounded-lg shadow-md border border-border p-6">
-          <h2 className="font-semibold mb-4">
-            GitHub Integration
-          </h2>
+          <h2 className="font-semibold mb-4">GitHub Integration</h2>
+
+          {project.repositories && project.repositories.length > 0 && (
+            <div className="mb-3 space-y-1">
+              {project.repositories.map((r) => (
+                <div key={r.id} className="text-xs text-green-500 font-mono">
+                  ✓ {r.githubOwner}/{r.githubRepo}
+                </div>
+              ))}
+            </div>
+          )}
 
           <select
             value={selectedRepo}
-            onChange={(e) =>
-              setSelectedRepo(e.target.value)
-            }
+            onChange={(e) => setSelectedRepo(e.target.value)}
             className="w-full border rounded p-2"
           >
             <option value="">
-              Select Repository
+              {project.repositories?.length ? 'Add another repository' : 'Select Repository'}
             </option>
-
             {repos.map((repo) => (
-              <option
-                key={repo.id}
-                value={repo.full_name}
-              >
+              <option key={repo.id} value={repo.full_name}>
                 {repo.full_name}
               </option>
             ))}
           </select>
 
-          <Button
-            className="mt-3"
-            onClick={handleConnectRepo}
-          >
+          <Button className="mt-3" onClick={handleConnectRepo}>
             Connect Repository
           </Button>
         </div>
@@ -391,19 +400,25 @@ export default function Workspace() {
             Notion Integration
           </h2>
 
+          {project.notionDbId ? (
+            <div className="text-xs text-green-500 font-mono mb-3 break-all">
+              ✓ Connected: {project.notionDbId}
+            </div>
+          ) : null}
+
           <Input
             value={notionDbId}
             onChange={(e) =>
               setNotionDbId(e.target.value)
             }
-            placeholder="Database ID"
+            placeholder={project.notionDbId ? 'Change database ID' : 'Database ID'}
           />
 
           <Button
             className="mt-3"
             onClick={handleConnectNotion}
           >
-            Connect Notion
+            {project.notionDbId ? 'Update Notion' : 'Connect Notion'}
           </Button>
         </div>
         {/* Notion Database */}
@@ -413,43 +428,31 @@ export default function Workspace() {
             <h2 className="font-semibold">Notion Database</h2>
           </div>
           {project.notionDbId ? (
-            <div className="space-y-4">
-              <div className="p-4 bg-muted rounded">
-                <p className="text-xs text-muted-foreground mb-2">Database ID:</p>
-                <p className="text-xs break-all font-mono">{project.notionDbId}</p>
-              </div>
-              <Button onClick={handleNotionSync} className="w-full">
-                Sync with Notion
-              </Button>
+            <div className="p-4 bg-muted rounded">
+              <p className="text-xs text-muted-foreground mb-2">Database ID:</p>
+              <p className="text-xs break-all font-mono">{project.notionDbId}</p>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Notion database not configured</p>
           )}
         </div>
 
-        {/* Gemini AI Assistant */}
+        {/* AI Note Taker */}
         <div className="bg-card rounded-lg shadow-md border border-border p-6">
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="text-purple-600" size={20} />
-            <h2 className="font-semibold">Gemini AI Assistant</h2>
+            <h2 className="font-semibold">AI Note Taker</h2>
           </div>
-          <div className="space-y-4">
-            <Textarea
-              value={geminiPrompt}
-              onChange={(e) => setGeminiPrompt(e.target.value)}
-              placeholder="Ask Gemini about your project..."
-              rows={3}
-              className="w-full"
-            />
-            <Button onClick={handleGeminiQuery} className="w-full">
-              Ask Gemini
+          <p className="text-sm text-muted-foreground mb-4">
+            Turn a meeting transcript into a schema-aware Notion draft, review it,
+            then sync it to your connected Notion template.
+          </p>
+          <Link href={`/workspace/${projectId}/meeting-result-review`}>
+            <Button className="w-full gap-2">
+              <Sparkles size={14} />
+              Open Meeting Result Review
             </Button>
-            {geminiResponse && (
-              <div className="p-4 bg-purple-500/10 rounded-lg border border-purple-500/20">
-                <p className="text-sm whitespace-pre-line">{geminiResponse}</p>
-              </div>
-            )}
-          </div>
+          </Link>
         </div>
 
         {/* Zoom Meetings */}
@@ -511,9 +514,31 @@ export default function Workspace() {
 
       {/* Team Members */}
       <div className="bg-card rounded-lg shadow-md border border-border p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Users size={20} />
-          <h2 className="font-semibold">Team Members</h2>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <Users size={20} />
+            <h2 className="font-semibold">Team Members</h2>
+          </div>
+        </div>
+
+        {/* Add member row */}
+        <div className="flex gap-2 mb-4">
+          <Input
+            type="email"
+            value={memberEmail}
+            onChange={(e) => setMemberEmail(e.target.value)}
+            placeholder="Add member by email"
+            onKeyDown={(e) => e.key === 'Enter' && handleAddMember()}
+          />
+          <Button
+            size="sm"
+            onClick={handleAddMember}
+            disabled={addingMember || !memberEmail.trim()}
+            className="gap-2 shrink-0"
+          >
+            <UserPlus size={14} />
+            Add
+          </Button>
         </div>
 
         {project.members?.length ? (
@@ -530,23 +555,26 @@ export default function Workspace() {
                     className="w-10 h-10 rounded-full"
                   />
                 )}
-
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-medium">{member.user.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {member.user.email}
-                  </p>
-                  <p className="text-xs text-primary">
-                    {member.role}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{member.user.email}</p>
+                  <p className="text-xs text-primary">{member.role}</p>
                 </div>
+                {member.role !== 'OWNER' && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRemoveMember(member.user.id, member.user.name)}
+                    className="text-destructive hover:text-destructive shrink-0"
+                  >
+                    <Trash2 size={14} />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">
-            No members found
-          </p>
+          <p className="text-muted-foreground text-sm">No members found</p>
         )}
       </div>
     </div>

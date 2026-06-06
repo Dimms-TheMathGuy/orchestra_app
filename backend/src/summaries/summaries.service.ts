@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common'
 import { GeminiService } from 'src/gemini/gemini.service'
 import { TranscriptsService } from 'src/transcript/transcripts.service'
-import { NotionService } from 'src/notion/notion.service'
+import { NotionService, GeminiDatabaseContext } from 'src/notion/notion.service'
 
 type DraftStatus = 'pending' | 'approved' | 'cancelled';
 
@@ -9,6 +9,7 @@ type Summary = {
     id: number;
     meetingId: string;
     drafts: MeetingDraft[];
+    schemaContext: GeminiDatabaseContext[];
 };
 
 type GeneratedDatabaseDraft = {
@@ -64,7 +65,8 @@ export class SummariesService {
         const summary = {
             id: draftBatchId,
             meetingId,
-            drafts: meetingDrafts
+            drafts: meetingDrafts,
+            schemaContext,
         }
 
         const existingSummaryIndex = this.summaries.findIndex((s) => s.meetingId === meetingId);
@@ -118,8 +120,14 @@ export class SummariesService {
 
         let syncedPages = 0;
 
+        const { summary } = draftLookup;
+        const dbSchema = summary.schemaContext.find(s => s.databaseId === draft.databaseId);
+
         for (const entry of draft.entries) {
-            await this.notion.createPage(draft.databaseId, entry.properties);
+            const properties = dbSchema
+                ? this.notion.convertDraftProperties(entry.properties, dbSchema.properties)
+                : entry.properties;
+            await this.notion.createPage(draft.databaseId, properties);
             syncedPages += 1;
         }
 

@@ -26,33 +26,30 @@ export class GithubService {
     }
 
     const webhookUrl = process.env.GITHUB_WEBHOOK_URL;
-
-    if (!webhookUrl) {
-      throw new BadRequestException('GITHUB_WEBHOOK_URL is not configured');
-    }
-
     const secret = crypto.randomBytes(20).toString('hex');
-    
-    console.log('Webhook URL:', webhookUrl);
 
-    await axios.post(
-      `https://api.github.com/repos/${repo.owner.login}/${repo.name}/hooks`,
-      {
-        name: 'web',
-        active: true,
-        events: ['push', 'pull_request', 'issues', 'issue_comment', 'pull_request_review'],
-        config: {
-          url: webhookUrl,
-          content_type: 'json',
-          secret,
+    if (webhookUrl) {
+      await axios.post(
+        `https://api.github.com/repos/${repo.owner.login}/${repo.name}/hooks`,
+        {
+          name: 'web',
+          active: true,
+          events: ['push', 'pull_request', 'issues', 'issue_comment', 'pull_request_review'],
+          config: {
+            url: webhookUrl,
+            content_type: 'json',
+            secret,
+          },
         },
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${user.githubToken}`,
+        {
+          headers: {
+            Authorization: `Bearer ${user.githubToken}`,
+          },
         },
-      },
-    );
+      );
+    } else {
+      console.warn('GITHUB_WEBHOOK_URL not set — repository linked without webhook. Set it in production.');
+    }
 
     return this.prisma.projectRepository.create({
       data: {
@@ -60,8 +57,8 @@ export class GithubService {
         githubOwner: repo.owner.login,
         githubRepo: repo.name,
         githubUrl: repo.html_url,
-        webhookSecret: secret
-      }
+        webhookSecret: secret,
+      },
     });
   }
 
@@ -109,45 +106,57 @@ export class GithubService {
       return { message: 'No repositories linked to this project' };
     }
 
+    const errors: string[] = [];
+
     for (const repo of project.repositories) {
-      const response = await axios.get(
-        `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits`,
-        {
-          headers: {
-            Authorization: `Bearer ${project.owner.githubToken}`,
-            Accept: 'application/vnd.github+json'
-          }
-        }
-      )
-
-      const commits = response.data
-
-      for (const commit of commits) {
-        await this.prisma.githubActivity.upsert({
-          where: {
-            repoId_githubId_type: {
-              repoId: repo.id,
-              githubId: commit.sha,
-              type: 'commit'
-            }
+      try {
+        const response = await axios.get(
+          `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits`,
+          {
+            headers: {
+              Authorization: `Bearer ${project.owner.githubToken}`,
+              Accept: 'application/vnd.github+json',
+            },
           },
-          update: {},
-          create: {
-            projectId: repo.projectId,
-            repoId: repo.id,
-            type: 'commit',
-            githubId: commit.sha,
-            title: commit.commit.message.split('\n')[0],
-            description: commit.commit.message,
-            author: commit.commit.author.name,
-            url: commit.html_url,
-            createdAt: new Date(commit.commit.author.date)
-          }
-        })
+        );
+
+        const commits = response.data;
+
+        for (const commit of commits) {
+          await this.prisma.githubActivity.upsert({
+            where: {
+              repoId_githubId_type: {
+                repoId: repo.id,
+                githubId: commit.sha,
+                type: 'commit',
+              },
+            },
+            update: {},
+            create: {
+              projectId: repo.projectId,
+              repoId: repo.id,
+              type: 'commit',
+              githubId: commit.sha,
+              title: commit.commit.message.split('\n')[0],
+              description: commit.commit.message,
+              author: commit.commit.author.name,
+              url: commit.html_url,
+              createdAt: new Date(commit.commit.author.date),
+            },
+          });
+        }
+      } catch (error: any) {
+        const msg = error?.response?.data?.message ?? error?.message ?? 'Unknown error';
+        console.error(`Sync failed for ${repo.githubOwner}/${repo.githubRepo}:`, msg);
+        errors.push(`${repo.githubOwner}/${repo.githubRepo}: ${msg}`);
       }
     }
 
-    return { message: 'Sync complete' }
+    if (errors.length > 0 && errors.length === project.repositories.length) {
+      throw new BadRequestException(`Sync failed for all repositories: ${errors.join('; ')}`);
+    }
+
+    return { message: 'Sync complete', errors: errors.length > 0 ? errors : undefined };
   }
 
   async githubStatus(@Req() req: Request) {
@@ -211,50 +220,50 @@ export class GithubService {
     }
   }
 
-  // async verifyWebhookSignature(payload: any, rawBody: Buffer | undefined, signature: string | undefined) {
-  //   if (!signature) {
-  //     throw new UnauthorizedException('Missing GitHub webhook signature');
-  //   }
+  async verifyWebhookSignature(payload: any, rawBody: Buffer | undefined, signature: string | undefined) {
+    if (!signature) {
+      throw new UnauthorizedException('Missing GitHub webhook signature');
+    }
 
-  //   if (!rawBody) {
-  //     throw new UnauthorizedException('Missing raw webhook body for signature verification');
-  //   }
+    if (!rawBody) {
+      throw new UnauthorizedException('Missing raw webhook body for signature verification');
+    }
 
-  //   const repo = payload?.repository;
+    const repo = payload?.repository;
 
-  //   if (!repo?.owner?.login || !repo?.name) {
-  //     throw new BadRequestException('Repository payload is missing');
-  //   }
+    if (!repo?.owner?.login || !repo?.name) {
+      throw new BadRequestException('Repository payload is missing');
+    }
 
-  //   const projectRepo = await this.prisma.projectRepository.findFirst({
-  //     where: {
-  //       githubOwner: repo.owner.login,
-  //       githubRepo: repo.name,
-  //     },
-  //     select: {
-  //       webhookSecret: true,
-  //     },
-  //   });
+    const projectRepo = await this.prisma.projectRepository.findFirst({
+      where: {
+        githubOwner: repo.owner.login,
+        githubRepo: repo.name,
+      },
+      select: {
+        webhookSecret: true,
+      },
+    });
 
-  //   if (!projectRepo?.webhookSecret) {
-  //     throw new UnauthorizedException('Webhook secret not found for repository');
-  //   }
+    if (!projectRepo?.webhookSecret) {
+      throw new UnauthorizedException('Webhook secret not found for repository');
+    }
 
-  //   const expectedSignature = `sha256=${crypto
-  //     .createHmac('sha256', projectRepo.webhookSecret)
-  //     .update(rawBody)
-  //     .digest('hex')}`;
+    const expectedSignature = `sha256=${crypto
+      .createHmac('sha256', projectRepo.webhookSecret)
+      .update(rawBody)
+      .digest('hex')}`;
 
-  //   const receivedSignature = Buffer.from(signature);
-  //   const expectedSignatureBuffer = Buffer.from(expectedSignature);
+    const receivedSignature = Buffer.from(signature);
+    const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
-  //   if (
-  //     receivedSignature.length !== expectedSignatureBuffer.length ||
-  //     !crypto.timingSafeEqual(receivedSignature, expectedSignatureBuffer)
-  //   ) {
-  //     throw new UnauthorizedException('Invalid GitHub webhook signature');
-  //   }
-  // }
+    if (
+      receivedSignature.length !== expectedSignatureBuffer.length ||
+      !crypto.timingSafeEqual(receivedSignature, expectedSignatureBuffer)
+    ) {
+      throw new UnauthorizedException('Invalid GitHub webhook signature');
+    }
+  }
 
   async handlePush(payload: any) {
 
@@ -385,9 +394,9 @@ export class GithubService {
     if(action === 'closed'){
       if(merged === true && baseBranch === linkedTask.targetBranch){
 
-        // const hasApprovedReview = await this.getReviewState(repo.owner.login, repo.name, pr.number, githubToken);
-        
-        // if(!hasApprovedReview) return;
+        const hasApprovedReview = await this.getReviewState(repo.owner.login, repo.name, pr.number, githubToken);
+
+        if(!hasApprovedReview) return;
 
         await this.prisma.taskBranchSync.update({
           where: {

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -132,6 +133,15 @@ export class ProjectsService {
             joinedAt: 'asc',
           },
         },
+        repositories: {
+          select: {
+            id: true,
+            githubOwner: true,
+            githubRepo: true,
+            githubUrl: true,
+          },
+          orderBy: { createdAt: 'asc' },
+        },
         _count: {
           select: {
             repositories: true,
@@ -204,6 +214,47 @@ export class ProjectsService {
     });
   }
 
+  async addMember(projectId: string, requesterId: string, email: string) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      include: { members: true },
+    });
+
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.ownerId !== requesterId) {
+      throw new ForbiddenException('Only the project owner can add members');
+    }
+
+    const userToAdd = await this.prisma.user.findUnique({ where: { email } });
+    if (!userToAdd) throw new NotFoundException(`No user found with email: ${email}`);
+
+    const alreadyMember = project.members.some((m) => m.userId === userToAdd.id);
+    if (alreadyMember) throw new BadRequestException('User is already a member of this project');
+
+    await this.prisma.projectMember.create({
+      data: { projectId, userId: userToAdd.id, role: 'MEMBER' },
+    });
+
+    return { id: userToAdd.id, name: userToAdd.name, email: userToAdd.email, avatarUrl: userToAdd.avatarUrl };
+  }
+
+  async removeMember(projectId: string, requesterId: string, memberUserId: string) {
+    const project = await this.prisma.project.findUnique({ where: { id: projectId } });
+    if (!project) throw new NotFoundException('Project not found');
+    if (project.ownerId !== requesterId) {
+      throw new ForbiddenException('Only the project owner can remove members');
+    }
+    if (memberUserId === requesterId) {
+      throw new BadRequestException('Owner cannot remove themselves');
+    }
+
+    await this.prisma.projectMember.deleteMany({
+      where: { projectId, userId: memberUserId },
+    });
+
+    return { removed: memberUserId };
+  }
+
   async connectNotion(
     projectId: string,
     userId: string,
@@ -247,6 +298,8 @@ export class ProjectsService {
         meetingCount: project._count.meetings,
         messageCount: project._count.messages,
       },
+      notionDbId: project.notionDbId ?? null,
+      repositories: project.repositories ?? [],
       integrations: {
         notion: Boolean(project.notionDbId),
         github: project._count.repositories > 0,

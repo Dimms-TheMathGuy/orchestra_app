@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -7,6 +9,10 @@ describe('AuthController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
+      providers: [
+        { provide: AuthService, useValue: { login: jest.fn(), register: jest.fn(), forgotPassword: jest.fn(), resetPassword: jest.fn() } },
+        { provide: PrismaService, useValue: { user: { update: jest.fn() } } },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);

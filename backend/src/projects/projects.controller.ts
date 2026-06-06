@@ -9,6 +9,7 @@ import {
   Post,
   Req,
   UseGuards,
+  HttpCode,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -75,6 +76,28 @@ export class ProjectsController {
       projectId,
       req.user.id,
     );
+  }
+
+  @Post(':projectId/members')
+  addMember(
+    @Param('projectId') projectId: string,
+    @Body() body: { email: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    if (!body.email?.trim()) {
+      throw new BadRequestException('email is required');
+    }
+    return this.projectsService.addMember(projectId, req.user.id, body.email.trim());
+  }
+
+  @Delete(':projectId/members/:memberId')
+  @HttpCode(200)
+  removeMember(
+    @Param('projectId') projectId: string,
+    @Param('memberId') memberId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.removeMember(projectId, req.user.id, memberId);
   }
 
   @Post(':projectId/notion')

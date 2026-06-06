@@ -1,5 +1,5 @@
 import { BadGatewayException, Injectable } from '@nestjs/common'
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import Groq from 'groq-sdk'
 import { z } from 'zod'
 
 const draftEntrySchema = z.object({
@@ -23,28 +23,22 @@ export class GeminiService {
         return responseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
     }
 
-    private getModel() {
-        const apiKey = process.env.GEMINI_API_KEY;
-
+    private getClient(): Groq {
+        const apiKey = process.env.GROQ_API_KEY;
         if (!apiKey) {
-            throw new BadGatewayException('Gemini API key is not configured')
+            throw new BadGatewayException('GROQ_API_KEY is not configured');
         }
-
-        return new GoogleGenerativeAI(apiKey).getGenerativeModel({
-            model: "gemini-1.5-flash"
-        })
+        return new Groq({ apiKey });
     }
 
     async summarize(text: string, schemaContext: unknown): Promise<DatabaseDraft[]> {
-        // Demo fallback: use mock output when MOCK_GEMINI is enabled
         if (process.env.MOCK_GEMINI === 'true') {
             return this.mockSummarize(schemaContext, text);
         }
 
-        const model = this.getModel()
+        const client = this.getClient();
 
-        const prompt = `
-You are an AI note taker that creates editable Notion draft data.
+        const prompt = `You are an AI note taker that creates editable Notion draft data.
 Follow the provided Notion schema context exactly.
 
 Return valid JSON only.
@@ -75,40 +69,42 @@ Notion schema context:
 ${JSON.stringify(schemaContext, null, 2)}
 
 Transcript:
-${text}
-`               // end of prompt
+${text}`;
 
-        const result = await model.generateContent(prompt)
-        const rawResponse = result.response.text().trim()
+        const completion = await client.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1,
+        });
+
+        const rawResponse = completion.choices[0]?.message?.content?.trim() ?? '';
 
         if (!rawResponse) {
-            throw new BadGatewayException('Gemini returned an empty response')
+            throw new BadGatewayException('AI returned an empty response');
         }
 
-        const cleanResponse = this.stripCodeFence(rawResponse)
+        const cleanResponse = this.stripCodeFence(rawResponse);
         let parsedDrafts: unknown;
 
         try {
             parsedDrafts = JSON.parse(cleanResponse);
         } catch {
-            throw new BadGatewayException('Gemini returned invalid JSON draft')
+            throw new BadGatewayException('AI returned invalid JSON draft');
         }
 
         const validatedDrafts = databaseDraftListSchema.safeParse(parsedDrafts);
 
         if (!validatedDrafts.success) {
-            throw new BadGatewayException('Gemini returned a draft with an unexpected shape')
+            throw new BadGatewayException('AI returned a draft with an unexpected shape');
         }
 
-        return validatedDrafts.data
-
+        return validatedDrafts.data;
     }
 
     // Mock to unblock demos when external API quota/credentials are unavailable
     private mockSummarize(schemaContext: any, transcriptText: string): DatabaseDraft[] {
         const contexts: Array<{ databaseId?: string; title?: string }> = Array.isArray(schemaContext) ? schemaContext : []
 
-        // Parsed demo data from the transcript
         const meetingTitle = 'Q3 Roadmap Discussion'
         const meetingSummary = transcriptText
         const task1 = { name: 'Launch new dashboard', assignee: 'John', status: 'Not started', deadline: '2026-05-31' }
@@ -167,7 +163,6 @@ ${text}
                 }
             }
 
-            // Fallback for unknown databases
             return {
                 databaseId: dbId,
                 title: dbTitle,
@@ -179,5 +174,4 @@ ${text}
             }
         })
     }
-
 }

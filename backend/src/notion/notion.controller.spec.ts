@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotionController } from './notion.controller';
+import { NotionService } from './notion.service';
 
 describe('NotionController', () => {
   let controller: NotionController;
@@ -7,6 +8,9 @@ describe('NotionController', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [NotionController],
+      providers: [
+        { provide: NotionService, useValue: { fetchBlockChildren: jest.fn(), createPage: jest.fn() } },
+      ],
     }).compile();
 
     controller = module.get<NotionController>(NotionController);

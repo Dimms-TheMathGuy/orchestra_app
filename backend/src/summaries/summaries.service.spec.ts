@@ -39,7 +39,7 @@ describe('SummariesService', () => {
   it('generates grouped drafts per database for a meeting', async () => {
     transcriptsService.findByMeeting.mockReturnValue({
       id: 1,
-      meetingId: 12,
+      meetingId: '12',
       text: 'Discuss bug triage and new tasks',
     });
 
@@ -61,15 +61,16 @@ describe('SummariesService', () => {
       },
     ]);
 
-    const result = await service.generate(12, 'block-123');
+    const result = await service.generate('12', 'block-123');
+    if ('error' in result) throw new Error(result.error);
 
-    expect(transcriptsService.findByMeeting).toHaveBeenCalledWith(12);
+    expect(transcriptsService.findByMeeting).toHaveBeenCalledWith('12');
     expect(notionService.fetchBlockChildren).toHaveBeenCalledWith('block-123');
     expect(geminiService.summarize).toHaveBeenCalledWith(
       'Discuss bug triage and new tasks',
       expect.any(Array),
     );
-    expect(result.meetingId).toBe(12);
+    expect(result.meetingId).toBe('12');
     expect(result.drafts).toHaveLength(2);
     expect(result.drafts[0]).toEqual(
       expect.objectContaining({
@@ -83,7 +84,7 @@ describe('SummariesService', () => {
   it('updates a pending draft without changing other drafts', async () => {
     transcriptsService.findByMeeting.mockReturnValue({
       id: 1,
-      meetingId: 99,
+      meetingId: '99',
       text: 'Meeting transcript',
     });
 
@@ -105,11 +106,12 @@ describe('SummariesService', () => {
       },
     ]);
 
-    const generated = await service.generate(99, 'block-99');
+    const generated = await service.generate('99', 'block-99');
+    if ('error' in generated) throw new Error(generated.error);
     const targetDraft = generated.drafts[0];
     const untouchedDraft = generated.drafts[1];
 
-    const updated = service.updateDraft(99, targetDraft.draftId, [
+    const updated = service.updateDraft('99', targetDraft.draftId, [
       { properties: { Name: 'Edited task' } },
     ]);
 
@@ -120,7 +122,7 @@ describe('SummariesService', () => {
       }),
     );
 
-    const summary = service.findByMeeting(99);
+    const summary = service.findByMeeting('99');
     expect(summary?.drafts[0].entries).toEqual([{ properties: { Name: 'Edited task' } }]);
     expect(summary?.drafts[1]).toEqual(untouchedDraft);
   });
@@ -128,7 +130,7 @@ describe('SummariesService', () => {
   it('cancels only the requested draft', async () => {
     transcriptsService.findByMeeting.mockReturnValue({
       id: 2,
-      meetingId: 77,
+      meetingId: '77',
       text: 'Meeting transcript',
     });
 
@@ -150,9 +152,10 @@ describe('SummariesService', () => {
       },
     ]);
 
-    const generated = await service.generate(77, 'block-77');
+    const generated = await service.generate('77', 'block-77');
+    if ('error' in generated) throw new Error(generated.error);
 
-    const result = service.cancelDraft(77, generated.drafts[1].draftId);
+    const result = service.cancelDraft('77', generated.drafts[1].draftId);
 
     expect(result).toEqual(
       expect.objectContaining({
@@ -160,14 +163,14 @@ describe('SummariesService', () => {
         status: 'cancelled',
       }),
     );
-    expect(service.findByMeeting(77)?.drafts[0].status).toBe('pending');
-    expect(service.findByMeeting(77)?.drafts[1].status).toBe('cancelled');
+    expect(service.findByMeeting('77')?.drafts[0].status).toBe('pending');
+    expect(service.findByMeeting('77')?.drafts[1].status).toBe('cancelled');
   });
 
   it('approves and syncs only one draft', async () => {
     transcriptsService.findByMeeting.mockReturnValue({
       id: 3,
-      meetingId: 55,
+      meetingId: '55',
       text: 'Meeting transcript',
     });
 
@@ -192,9 +195,10 @@ describe('SummariesService', () => {
       },
     ]);
 
-    const generated = await service.generate(55, 'block-55');
+    const generated = await service.generate('55', 'block-55');
+    if ('error' in generated) throw new Error(generated.error);
 
-    const result = await service.approveDraft(55, generated.drafts[0].draftId);
+    const result = await service.approveDraft('55', generated.drafts[0].draftId);
 
     expect(notionService.createPage).toHaveBeenCalledTimes(2);
     expect(notionService.createPage).toHaveBeenNthCalledWith(
@@ -214,7 +218,7 @@ describe('SummariesService', () => {
         syncedPages: 2,
       }),
     );
-    expect(service.findByMeeting(55)?.drafts[0].status).toBe('approved');
-    expect(service.findByMeeting(55)?.drafts[1].status).toBe('pending');
+    expect(service.findByMeeting('55')?.drafts[0].status).toBe('approved');
+    expect(service.findByMeeting('55')?.drafts[1].status).toBe('pending');
   });
 });

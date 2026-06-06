@@ -2,218 +2,460 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { FileText, CheckCircle, Send } from 'lucide-react'
+import { FileText, Sparkles, Send, Download, Upload, Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
-import { get, post } from '@/app/lib/api'
+import { Input } from '@/app/components/ui/input'
+import { Textarea } from '@/app/components/ui/textarea'
+import { get, post, patch } from '@/app/lib/api'
 
-interface Meeting {
+interface ZoomMeeting {
   id: string
   topic: string
-  startTime: string
-  endTime?: string
-  status: 'upcoming' | 'completed'
-  aiSummary?: string
-  actionItems?: { task: string; assignee: string; deadline: string }[]
-  transcriptVtt?: string
+  start_time?: string
+  duration?: number
+  join_url?: string
+}
+
+interface DraftEntry {
+  properties: Record<string, unknown>
+}
+
+interface MeetingDraft {
+  draftId: string
+  status: 'pending' | 'approved' | 'cancelled'
+  databaseId: string
+  title: string
+  entries: DraftEntry[]
+}
+
+interface Summary {
+  id: number
+  meetingId: string
+  drafts: MeetingDraft[]
 }
 
 export default function MeetingResultReview() {
   const params = useParams()
   const projectId = params?.projectId as string
 
-  const [meetings, setMeetings] = useState<Meeting[]>([])
-  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null)
-  const [selectedTranscriptParts, setSelectedTranscriptParts] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [syncing, setSyncing] = useState(false)
+  const [meetings, setMeetings] = useState<ZoomMeeting[]>([])
+  const [selectedMeetingId, setSelectedMeetingId] = useState('')
+  const [transcript, setTranscript] = useState('')
+  const [blockId, setBlockId] = useState('')
+  const [summary, setSummary] = useState<Summary | null>(null)
 
+  const [loadingMeetings, setLoadingMeetings] = useState(true)
+  const [loadingTranscript, setLoadingTranscript] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [approvingId, setApprovingId] = useState<string | null>(null)
+
+  // Load the project's connected Notion id (used as default blockId) + Zoom meetings
   useEffect(() => {
-    if (projectId) {
-      fetchMeetings()
+    if (!projectId) return
+
+    const init = async () => {
+      try {
+        const [project, zoomMeetings] = await Promise.all([
+          get(`/projects/${projectId}`).catch(() => null),
+          get('/zoom/meetings').catch(() => []),
+        ])
+
+        if (project?.notionDbId) setBlockId(project.notionDbId)
+        setMeetings(Array.isArray(zoomMeetings) ? zoomMeetings : [])
+        if (Array.isArray(zoomMeetings) && zoomMeetings.length > 0) {
+          setSelectedMeetingId(String(zoomMeetings[0].id))
+        }
+      } catch (error) {
+        console.error(error)
+        toast.error('Failed to load meetings')
+      } finally {
+        setLoadingMeetings(false)
+      }
     }
+
+    init()
   }, [projectId])
 
-  const fetchMeetings = async () => {
-    try {
-      const data = await get(`/meetings?projectId=${projectId}&status=completed`)
-      setMeetings(data)
-      if (data.length > 0) {
-        setSelectedMeeting(data[0])
-      }
-    } catch (error) {
-      toast.error('Failed to load meetings')
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
+  // --- Transcript sources ---
 
-  const toggleTranscriptSelection = (line: string) => {
-    setSelectedTranscriptParts((prev) =>
-      prev.includes(line) ? prev.filter((l) => l !== line) : [...prev, line]
-    )
-  }
-
-  const handleTransferToNotion = async () => {
-    if (selectedTranscriptParts.length === 0) {
-      toast.error('Please select transcript parts first')
+  const handlePullFromZoom = async () => {
+    if (!selectedMeetingId) {
+      toast.error('Select a meeting first')
       return
     }
-
-    setSyncing(true)
+    setLoadingTranscript(true)
     try {
-      await post(`/meetings/${selectedMeeting?.id}/sync-to-notion`, {
-        transcriptParts: selectedTranscriptParts,
-      })
-      toast.success(`Transferred ${selectedTranscriptParts.length} items to Notion!`)
-      setSelectedTranscriptParts([])
+      const data = await get(`/zoom/meetings/${selectedMeetingId}/transcript`)
+      setTranscript(data.transcript || '')
+      toast.success('Transcript pulled from Zoom')
     } catch (error) {
-      toast.error('Failed to transfer to Notion')
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'No Zoom transcript yet — upload a .vtt instead',
+      )
     } finally {
-      setSyncing(false)
+      setLoadingTranscript(false)
     }
   }
 
-  if (loading) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[calc(100vh-200px)]">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-          <p className="text-muted-foreground mt-4">Loading meetings...</p>
-        </div>
-      </div>
-    )
+  const handleUploadVtt = async (file: File) => {
+    if (!selectedMeetingId) {
+      toast.error('Select a meeting first')
+      return
+    }
+    setLoadingTranscript(true)
+    try {
+      const text = await file.text()
+      await post('/transcripts', { meetingId: selectedMeetingId, text })
+      setTranscript(text)
+      toast.success('Transcript uploaded')
+    } catch (error) {
+      toast.error('Failed to upload transcript')
+    } finally {
+      setLoadingTranscript(false)
+    }
   }
 
-  if (meetings.length === 0 || !selectedMeeting) {
-    return (
-      <div className="p-8 flex items-center justify-center min-h-[calc(100vh-200px)]">
-        <p className="text-muted-foreground">No completed meetings found for this project</p>
-      </div>
-    )
+  // --- Generate schema-aware drafts ---
+
+  const handleGenerate = async () => {
+    if (!selectedMeetingId) {
+      toast.error('Select a meeting first')
+      return
+    }
+    if (!blockId.trim()) {
+      toast.error('Enter the Notion page/template block ID')
+      return
+    }
+    setGenerating(true)
+    try {
+      const result = await post(`/summaries/${selectedMeetingId}`, { blockId })
+
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+
+      setSummary(result)
+      toast.success('Draft generated from transcript')
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to generate draft',
+      )
+    } finally {
+      setGenerating(false)
+    }
   }
 
-  const transcriptLines =
-    selectedMeeting.transcriptVtt?.split('\n\n').filter((line) => line.trim()) || []
+  // --- Edit a draft's entries (raw JSON for now) ---
+
+  const handleEntriesChange = (draftId: string, value: string) => {
+    setSummary((prev) => {
+      if (!prev) return prev
+      return {
+        ...prev,
+        drafts: prev.drafts.map((d) =>
+          d.draftId === draftId ? { ...d, _rawEdit: value } as MeetingDraft & { _rawEdit: string } : d,
+        ),
+      }
+    })
+  }
+
+  const handleSaveEdit = async (draft: MeetingDraft & { _rawEdit?: string }) => {
+    if (draft._rawEdit === undefined) return
+    let entries: DraftEntry[]
+    try {
+      entries = JSON.parse(draft._rawEdit)
+    } catch {
+      toast.error('Invalid JSON in draft entries')
+      return
+    }
+    try {
+      await patch(`/summaries/${selectedMeetingId}/drafts/${draft.draftId}`, {
+        entries,
+      })
+      setSummary((prev) =>
+        prev
+          ? {
+              ...prev,
+              drafts: prev.drafts.map((d) =>
+                d.draftId === draft.draftId ? { ...d, entries } : d,
+              ),
+            }
+          : prev,
+      )
+      toast.success('Draft updated')
+    } catch (error) {
+      toast.error('Failed to update draft')
+    }
+  }
+
+  const handleCancelDraft = async (draftId: string) => {
+    try {
+      await post(`/summaries/${selectedMeetingId}/drafts/${draftId}/cancel`, {})
+      setSummary((prev) =>
+        prev
+          ? {
+              ...prev,
+              drafts: prev.drafts.map((d) =>
+                d.draftId === draftId ? { ...d, status: 'cancelled' } : d,
+              ),
+            }
+          : prev,
+      )
+      toast.success('Draft cancelled')
+    } catch (error) {
+      toast.error('Failed to cancel draft')
+    }
+  }
+
+  // --- The single "Sync to Notion" action = approve ---
+
+  const handleSyncToNotion = async (draftId: string) => {
+    setApprovingId(draftId)
+    try {
+      const result = await post(
+        `/summaries/${selectedMeetingId}/drafts/${draftId}/approve`,
+        {},
+      )
+
+      if (result?.error) {
+        toast.error(result.error)
+        return
+      }
+
+      setSummary((prev) =>
+        prev
+          ? {
+              ...prev,
+              drafts: prev.drafts.map((d) =>
+                d.draftId === draftId ? { ...d, status: 'approved' } : d,
+              ),
+            }
+          : prev,
+      )
+      toast.success(
+        `Synced ${result.syncedPages ?? ''} page(s) to Notion`.trim(),
+      )
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to sync to Notion',
+      )
+    } finally {
+      setApprovingId(null)
+    }
+  }
 
   return (
     <div className="p-8">
-      <h1 className="text-3xl font-bold mb-8">Meeting Result Review</h1>
+      <h1 className="text-3xl font-bold mb-2">Meeting Result Review</h1>
+      <p className="text-muted-foreground mb-8">
+        Generate a schema-aware draft from the meeting transcript, review it, then
+        sync it to your Notion template.
+      </p>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Meeting History Sidebar */}
-        <div className="lg:col-span-1 bg-card rounded-lg shadow-md border border-border p-6">
-          <h2 className="font-bold mb-4">Meeting History</h2>
-          <div className="space-y-2">
-            {meetings.map((meeting) => (
-              <button
-                key={meeting.id}
-                onClick={() => {
-                  setSelectedMeeting(meeting)
-                  setSelectedTranscriptParts([])
-                }}
-                className={`w-full text-left p-4 rounded-lg border transition-colors ${
-                  selectedMeeting.id === meeting.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:bg-muted'
-                }`}
+        {/* Left: setup */}
+        <div className="lg:col-span-1 space-y-6">
+          <div className="bg-card rounded-lg shadow-md border border-border p-6">
+            <h2 className="font-bold mb-4 flex items-center gap-2">
+              <FileText size={18} /> 1. Meeting & Transcript
+            </h2>
+
+            <label className="text-sm font-medium">Meeting</label>
+            <select
+              value={selectedMeetingId}
+              onChange={(e) => {
+                setSelectedMeetingId(e.target.value)
+                setTranscript('')
+                setSummary(null)
+              }}
+              className="w-full border rounded p-2 mt-1 mb-4 bg-input-background"
+              disabled={loadingMeetings}
+            >
+              <option value="">
+                {loadingMeetings ? 'Loading meetings...' : 'Select a meeting'}
+              </option>
+              {meetings.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.topic} ({m.id})
+                </option>
+              ))}
+            </select>
+
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                onClick={handlePullFromZoom}
+                disabled={loadingTranscript || !selectedMeetingId}
+                className="gap-2"
               >
-                <div className="flex items-start gap-2 mb-2">
-                  <FileText size={16} className="mt-1 flex-shrink-0" />
-                  <h3 className="text-sm font-medium">{meeting.topic}</h3>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(meeting.startTime).toLocaleDateString()}
-                </p>
-                <span className="inline-block mt-2 text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded">
-                  {meeting.status}
+                <Download size={14} /> Pull transcript from Zoom
+              </Button>
+
+              <label className="text-xs text-muted-foreground text-center">
+                — or fallback —
+              </label>
+
+              <label className="inline-flex">
+                <input
+                  type="file"
+                  accept=".vtt,.txt"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0]
+                    if (file) handleUploadVtt(file)
+                  }}
+                />
+                <span className="w-full inline-flex items-center justify-center gap-2 border rounded-md h-9 px-3 text-sm cursor-pointer hover:bg-muted">
+                  <Upload size={14} /> Upload .vtt manually
                 </span>
-              </button>
-            ))}
+              </label>
+            </div>
+
+            {transcript && (
+              <div className="mt-4">
+                <label className="text-xs text-muted-foreground">
+                  Transcript preview
+                </label>
+                <Textarea
+                  value={transcript}
+                  onChange={(e) => setTranscript(e.target.value)}
+                  rows={6}
+                  className="mt-1 text-xs font-mono"
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="bg-card rounded-lg shadow-md border border-border p-6">
+            <h2 className="font-bold mb-4 flex items-center gap-2">
+              <Sparkles size={18} className="text-purple-600" /> 2. Notion template
+            </h2>
+            <label className="text-sm font-medium">Notion page / block ID</label>
+            <Input
+              value={blockId}
+              onChange={(e) => setBlockId(e.target.value)}
+              placeholder="Notion page block ID containing your databases"
+              className="mt-1 mb-2 font-mono text-xs"
+            />
+            <p className="text-xs text-muted-foreground mb-4">
+              The AI reads this template's database schema first, then generates a
+              draft that matches it.
+            </p>
+            <Button
+              onClick={handleGenerate}
+              disabled={generating || !transcript || !blockId}
+              className="w-full gap-2"
+            >
+              {generating ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <Sparkles size={14} />
+              )}
+              Generate Draft
+            </Button>
           </div>
         </div>
 
-        {/* Meeting Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* AI Summary & Action Items */}
-          <div className="bg-card rounded-lg shadow-md border border-border p-6">
-            <h2 className="font-bold mb-4">AI Summary & Key Decisions</h2>
+        {/* Right: drafts */}
+        <div className="lg:col-span-2">
+          <div className="bg-card rounded-lg shadow-md border border-border p-6 min-h-[300px]">
+            <h2 className="font-bold mb-4">3. Review & Sync</h2>
 
-            {selectedMeeting.aiSummary && (
-              <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-lg mb-4">
-                <h3 className="text-sm font-semibold mb-2">Summary</h3>
-                <div className="text-sm whitespace-pre-line text-foreground">
-                  {selectedMeeting.aiSummary}
-                </div>
-              </div>
-            )}
-
-            {selectedMeeting.actionItems && selectedMeeting.actionItems.length > 0 && (
-              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <h3 className="text-sm font-semibold mb-3">Action Items</h3>
-                <div className="space-y-2">
-                  {selectedMeeting.actionItems.map((item, index) => (
-                    <div key={index} className="flex items-start gap-2">
-                      <CheckCircle size={16} className="text-green-600 mt-1 flex-shrink-0" />
-                      <div className="text-sm">
-                        <p className="font-medium mb-1">{item.task}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Assigned to: {item.assignee} | Due: {item.deadline}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Transcript */}
-          <div className="bg-card rounded-lg shadow-md border border-border p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold">Transcript</h2>
-              {selectedTranscriptParts.length > 0 && (
-                <Button
-                  onClick={handleTransferToNotion}
-                  disabled={syncing}
-                  size="sm"
-                  className="gap-2"
-                >
-                  <Send size={16} />
-                  Transfer to Notion ({selectedTranscriptParts.length})
-                </Button>
-              )}
-            </div>
-
-            <p className="text-sm text-muted-foreground mb-4">
-              Click on transcript parts to select them for meeting notes
-            </p>
-
-            {transcriptLines.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No transcript available</p>
+            {!summary ? (
+              <p className="text-sm text-muted-foreground">
+                No draft yet. Load a transcript and generate a draft to begin.
+              </p>
+            ) : summary.drafts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                The AI returned no entries for this template.
+              </p>
             ) : (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {transcriptLines.map((line, index) => {
-                  const isSelected = selectedTranscriptParts.includes(line)
+              <div className="space-y-6">
+                {summary.drafts.map((draft) => {
+                  const editable = draft as MeetingDraft & { _rawEdit?: string }
+                  const rawValue =
+                    editable._rawEdit ?? JSON.stringify(draft.entries, null, 2)
+                  const isApproved = draft.status === 'approved'
+                  const isCancelled = draft.status === 'cancelled'
+
                   return (
-                    <button
-                      key={index}
-                      onClick={() => toggleTranscriptSelection(line)}
-                      className={`w-full text-left p-4 rounded-lg border transition-all ${
-                        isSelected
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:bg-muted'
+                    <div
+                      key={draft.draftId}
+                      className={`border rounded-lg p-4 ${
+                        isApproved
+                          ? 'border-green-500/40 bg-green-500/5'
+                          : isCancelled
+                            ? 'border-border bg-muted/40 opacity-60'
+                            : 'border-border'
                       }`}
                     >
-                      <div className="text-sm whitespace-pre-line">{line}</div>
-                      {isSelected && (
-                        <div className="mt-2 flex items-center gap-2 text-xs text-primary">
-                          <CheckCircle size={14} />
-                          Selected for meeting notes
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="font-semibold text-sm">{draft.title}</h3>
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {draft.databaseId}
+                          </p>
+                        </div>
+                        <span
+                          className={`text-xs px-2 py-1 rounded ${
+                            isApproved
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                              : isCancelled
+                                ? 'bg-muted text-muted-foreground'
+                                : 'bg-primary/20 text-primary'
+                          }`}
+                        >
+                          {draft.status}
+                        </span>
+                      </div>
+
+                      <Textarea
+                        value={rawValue}
+                        onChange={(e) =>
+                          handleEntriesChange(draft.draftId, e.target.value)
+                        }
+                        rows={Math.min(14, rawValue.split('\n').length + 1)}
+                        className="text-xs font-mono"
+                        disabled={isApproved || isCancelled}
+                      />
+
+                      {!isApproved && !isCancelled && (
+                        <div className="flex items-center gap-2 mt-3">
+                          <Button
+                            size="sm"
+                            onClick={() => handleSyncToNotion(draft.draftId)}
+                            disabled={approvingId === draft.draftId}
+                            className="gap-2"
+                          >
+                            <Send size={14} />
+                            {approvingId === draft.draftId
+                              ? 'Syncing...'
+                              : 'Sync to Notion'}
+                          </Button>
+                          {editable._rawEdit !== undefined && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSaveEdit(editable)}
+                            >
+                              Save edits
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleCancelDraft(draft.draftId)}
+                            className="gap-2 text-destructive"
+                          >
+                            <Trash2 size={14} /> Discard
+                          </Button>
                         </div>
                       )}
-                    </button>
+                    </div>
                   )
                 })}
               </div>

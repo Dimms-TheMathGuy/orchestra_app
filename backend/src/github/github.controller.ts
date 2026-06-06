@@ -4,7 +4,6 @@ import type { Request } from 'express';
 import { linkTaskBranchSchema } from './dto/link-task-branch.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
-@UseGuards(JwtAuthGuard)
 @Controller('api/github')
 export class GithubController {
 
@@ -15,6 +14,7 @@ export class GithubController {
     return this.githubService.connect();
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get('repos')
   getRepos(@Req() req: Request) {
     const userId = (req as any).user?.id;
@@ -26,6 +26,7 @@ export class GithubController {
     return this.githubService.getUserRepos(userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post(':projectId/repository')
   linkRepo(
     @Param('projectId') projectId: string, @Body() repo: any, @Req() req: any) {
@@ -64,6 +65,7 @@ export class GithubController {
     return this.githubService.getActivities(projectId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Post('projects/:projectId/sync')
   syncProject(@Param('projectId') projectId: string, @Req() req: any) {
     return this.githubService.syncProject(projectId, req.user.id);
@@ -74,7 +76,7 @@ export class GithubController {
     const event = headers['x-github-event'];
     const signature = headers['x-hub-signature-256'];
 
-    // await this.githubService.verifyWebhookSignature(payload, req.rawBody, signature);
+    await this.githubService.verifyWebhookSignature(payload, req.rawBody, signature);
 
     await this.githubService.processEvent(event, payload);
 

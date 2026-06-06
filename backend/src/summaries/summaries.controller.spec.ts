@@ -32,13 +32,13 @@ describe('SummariesController', () => {
   it('passes meetingId and blockId to generate', () => {
     controller.generate('10', 'block-xyz');
 
-    expect(summariesService.generate).toHaveBeenCalledWith(10, 'block-xyz');
+    expect(summariesService.generate).toHaveBeenCalledWith('10', 'block-xyz');
   });
 
   it('passes meetingId and draftId to approve', () => {
     controller.approveSummary('10', 'draft-1');
 
-    expect(summariesService.approveDraft).toHaveBeenCalledWith(10, 'draft-1');
+    expect(summariesService.approveDraft).toHaveBeenCalledWith('10', 'draft-1');
   });
 
   it('passes validated entries to updateDraft', () => {
@@ -49,7 +49,7 @@ describe('SummariesController', () => {
     controller.updateDraft('10', 'draft-1', body);
 
     expect(summariesService.updateDraft).toHaveBeenCalledWith(
-      10,
+      '10',
       'draft-1',
       body.entries,
     );
@@ -58,6 +58,6 @@ describe('SummariesController', () => {
   it('passes meetingId and draftId to cancelDraft', () => {
     controller.cancelDraft('10', 'draft-1');
 
-    expect(summariesService.cancelDraft).toHaveBeenCalledWith(10, 'draft-1');
+    expect(summariesService.cancelDraft).toHaveBeenCalledWith('10', 'draft-1');
   });
 });
