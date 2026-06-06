@@ -15,6 +15,8 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() body: any) {
+    console.log("Register Masuk:", body);
+
     return this.authService.register(
       body.email,
       body.password,
@@ -72,5 +74,17 @@ export class AuthController {
     });
 
     return res.send('GitHub connected successfully');
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() body: { email: string }) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  resetPassword(
+    @Body() body: { token: string; newPassword: string },
+  ) {
+    return this.authService.resetPassword(body.token, body.newPassword);
   }
 }

@@ -14,6 +14,11 @@ import { SummariesModule } from './summaries/summaries.module';
 import { MeetingsModule } from './meetings/meetings.module';
 import { ZoomModule } from './zoom/zoom.module';
 import { ActivityGateway } from './activity/activity.gateway';
+import { PasskeyModule } from './passkey/passkey.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { ProjectsModule } from './projects/projects.module';
+import { MeetingReviewModule } from './meeting-review/meeting-review.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -29,6 +34,11 @@ import { ActivityGateway } from './activity/activity.gateway';
     SummariesModule,
     MeetingsModule,
     ZoomModule,
+    PasskeyModule,
+    DashboardModule,
+    ProjectsModule,
+    MeetingReviewModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

@@ -1,5 +1,4 @@
-import { Controller, Get, Post, Param, Body, BadRequestException, Req, Headers } from '@nestjs/common';
-import { Request } from 'express';
+import { Controller, Get, Post, Param, Body, BadRequestException, Headers } from '@nestjs/common';
 import { ZoomService } from './zoom.service';
 import { scheduleMeetingSchema } from './dto/schedule-meeting.dto';
 
@@ -29,6 +28,11 @@ export class ZoomController {
 
     @Get('meetings/:meetingId/transcript')
     async transcript(@Param('meetingId') meetingId: string) {
+        return this.zoom.retrieveTranscript(meetingId);
+    }
+
+    @Get(':meetingId')
+    async getTranscript(@Param('meetingId') meetingId: string) {
         return this.zoom.retrieveTranscript(meetingId);
     }
 

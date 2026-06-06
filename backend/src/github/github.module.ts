@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { GithubController } from './github.controller';
 import { GithubService } from './github.service';
-import { PrismaModule } from '../prisma/prisma.module' 
+import { PrismaModule } from '../prisma/prisma.module';
 import { NotionModule } from 'src/notion/notion.module';
 import { ActivityModule } from 'src/activity/activity.module';
 
@@ -10,4 +10,4 @@ import { ActivityModule } from 'src/activity/activity.module';
   controllers: [GithubController],
   providers: [GithubService],
 })
-export class GithubModule {}
+export class GithubModule { }

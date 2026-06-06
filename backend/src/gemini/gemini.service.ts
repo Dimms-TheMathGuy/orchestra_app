@@ -19,10 +19,20 @@ type DatabaseDraft = z.infer<typeof databaseDraftSchema>;
 @Injectable()
 export class GeminiService {
 
-    private genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
     private stripCodeFence(responseText: string): string {
         return responseText.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '').trim();
+    }
+
+    private getModel() {
+        const apiKey = process.env.GEMINI_API_KEY;
+
+        if (!apiKey) {
+            throw new BadGatewayException('Gemini API key is not configured')
+        }
+
+        return new GoogleGenerativeAI(apiKey).getGenerativeModel({
+            model: "gemini-1.5-flash"
+        })
     }
 
     async summarize(text: string, schemaContext: unknown): Promise<DatabaseDraft[]> {
@@ -31,9 +41,7 @@ export class GeminiService {
             return this.mockSummarize(schemaContext, text);
         }
 
-        const model = this.genAI.getGenerativeModel({
-            model: "gemini-2.0-flash"
-        })
+        const model = this.getModel()
 
         const prompt = `
 You are an AI note taker that creates editable Notion draft data.

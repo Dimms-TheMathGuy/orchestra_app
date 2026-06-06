@@ -1,0 +1,92 @@
+Yes. In this repo, the clean backend for that screen is a small projects module built on top of the models you already have in schema.prisma and schema.prisma.
+
+From the UI, the backend requirement is only this:
+
+Project Name is required
+Project Description is optional
+collaborators are invited later
+Notion/GitHub/Zoom are connected later
+So the main endpoint should be:
+
+POST /projects
+Authorization: Bearer <jwt>
+Content-Type: application/json
+
+{
+  "name": "Q1 Infrastructure Refactor",
+  "description": "Refactor infra and clean deployment flow"
+}
+The service logic should be:
+
+async createProject(userId: string, body: { name: string; description?: string }) {
+  return this.prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        name: body.name.trim(),
+        description: body.description?.trim() || null,
+        ownerId: userId,
+      },
+    });
+
+    await tx.projectMember.create({
+      data: {
+        userId,
+        projectId: project.id,
+        role: 'OWNER',
+      },
+    });
+
+    return {
+      ...project,
+      integrations: {
+        notion: false,
+        github: false,
+        zoom: false,
+      },
+    };
+  });
+}
+The important repo-specific detail is auth: auth.service.ts signs JWT with sub, but some controllers already expect req.user.id in github.controller.ts. So before using POST /projects, you should add a JWT strategy/guard that maps payload.sub to req.user.id. Also register a new ProjectsModule in app.module.ts.
+
+If you want, I can wire the actual backend files next:
+
+backend/src/projects/projects.module.ts
+backend/src/projects/projects.controller.ts
+backend/src/projects/projects.service.ts
+backend/src/projects/dto/create-project.dto.ts
+And I can make it match the current coding style in this repo.
+
+
+Please wire them
+
+
+
+
+Worked for 8m 50s
+The Add Project backend is wired. POST /projects now accepts a JWT-authenticated request with name and optional description, creates the project, adds the creator as an OWNER member in the same transaction, and returns a project payload with basic integration/status info. I also added GET /projects and GET /projects/:projectId so the frontend can list and fetch the created workspace right away. The main pieces are in projects.controller.ts (line 22), projects.service.ts (line 13), and create-project.dto.ts (line 3).
+
+JWT request auth is now in place for protected routes, so req.user.id is populated from the bearer token. That wiring lives in jwt.strategy.ts (line 10) and auth.module.ts (line 10), and the new module is registered in app.module.ts (line 17). I also added focused coverage in projects.service.spec.ts (line 45).
+
+Verification: npx jest src/projects/projects.service.spec.ts --runInBand passed, and npx tsc -p tsconfig.build.json --noEmit passed. npm run build did not complete because backend/dist/tsconfig.build.tsbuildinfo was locked by another process.
+
+To call it from the frontend, send:
+POST /projects with Authorization: Bearer <access_token> and body { "name": "Q1 Infrastructure Refactor", "description": "..." }.
+
+If you want, I can wire the frontend Add Project form to this endpoint next.
+
+
+10 files changed
++494
+-18
+Undo
+
+app.module.ts
+auth.constants.ts
+auth.module.ts
+jwt-auth.guard.ts
+jwt.strategy.ts
+create-project.dto.ts
+projects.controller.ts
+projects.module.ts
+projects.service.spec.ts
+projects.service.ts

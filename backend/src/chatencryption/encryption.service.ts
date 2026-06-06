@@ -1,7 +1,7 @@
 import * as crypto from "crypto"
 
 const algorithm = "aes-256-cbc"
-const secretKey = process.env.CHAT_SECRET || "supersecretkey123456789"
+const secretKey = process.env.CHAT_SECRET || "0123456789abcdef0123456789abcdef"
 
 export function encrypt(text: string) {
 

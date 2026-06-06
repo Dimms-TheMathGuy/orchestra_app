@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common'
 
-
 type Transcript = {
-    id: number;
+    id: string;
     meetingId: string;
     text: string;
 };
@@ -13,7 +12,7 @@ export class TranscriptsService {
 
     upload(meetingId: string, text: string) {
         const transcript = {
-            id: Date.now(),
+            id: Date.now().toString(),
             meetingId,
             text
         };

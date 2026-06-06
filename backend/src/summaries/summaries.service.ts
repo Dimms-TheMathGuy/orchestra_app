@@ -41,14 +41,18 @@ export class SummariesService {
 
     async generate(meetingId: string, blockId: string) {
 
-        const transcript = this.transcripts.findByMeeting(meetingId);
-        if (!transcript) {
+        const transcripts = await this.transcripts.findByMeeting(String(meetingId));
+        if (!transcripts) {
             return { error: "Transcript not found" }
         }
 
+        const fullText = Array.isArray(transcripts)
+            ? transcripts.map(t => t.text).join("\n")
+            : transcripts.text;
+
         const schemaContext = await this.notion.fetchBlockChildren(blockId);
 
-        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(transcript.text, schemaContext);
+        const generatedDrafts: GeneratedDatabaseDraft[] = await this.gemini.summarize(fullText, schemaContext);
         const draftBatchId = Date.now();  // log waktu batch dari draft dibuat pertama kali
 
         const meetingDrafts: MeetingDraft[] = generatedDrafts.map((draft, index) => ({

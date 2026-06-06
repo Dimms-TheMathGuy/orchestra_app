@@ -3,7 +3,7 @@ import { TranscriptsService } from './transcripts.service'
 
 @Controller('transcripts')
 export class TranscriptsController {
-    constructor(private transcriptsService: TranscriptsService) { }
+  constructor(private transcriptsService: TranscriptsService) {}
 
     @Post()
     upload(@Body() body) {
@@ -13,6 +13,6 @@ export class TranscriptsController {
     }
     @Get(':meetingId')
     getTranscript(@Param('meetingId') id: string) {
-        return this.transcriptsService.findByMeeting(id)
+        return this.transcriptsService.findByMeeting(String(id))
     }
 }

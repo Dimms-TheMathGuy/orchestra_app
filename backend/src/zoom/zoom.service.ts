@@ -14,7 +14,6 @@ type ZoomTokens = {
 export class ZoomService {
     private tokenCache: ZoomTokens | null = null;
     private readonly baseUrl = 'https://api.zoom.us/v2';
-
     private meetingBlockMap = new Map<string, string>();
 
     constructor(
@@ -241,3 +240,4 @@ export class ZoomService {
         return { ok: true };
     }
 }
+
