@@ -1,114 +1,86 @@
 # SESSION_PROGRESS
 
-## Completed
-- All 4 MVP integrations live and demo-ready: Auth, Zoom, AI Note Taker, GitHub → Notion.
-- Zoom module rebuilt from scratch (Server-to-Server OAuth): schedule, list, recordings, transcript → TranscriptsService.
-- Zoom credentials configured and tested (schedule + list working; transcript pending completed meeting).
-- GitHub → Notion sync verified via simulated webhook: link → PR opened → PR merged → Notion Done.
-- AI Note Taker E2E tested: upload → Gemini draft → edit/cancel/approve → Notion write-back.
-- Auth register/login tested.
-- Demo script at `ARTIFACTS/DEMO_SCRIPT.md` with all curls copy-paste ready.
-- DB seeded with demo project, repository, and user token.
+## Completed (this session)
+
+### Batch 1 — UI polish
+- Logo updated to `/Logo.png`, aspect ratio 2.1 (`Logo.tsx`)
+- Sidebar collapse icons replaced: `PanelLeftClose` / `PanelLeftOpen` (was `ChevronLeft`/`ChevronRight`)
+- Collapsed logo-mark is now a hover-expandable button (shows `PanelLeftOpen` icon on hover)
+- AI Summary card added to meeting review page: "Generate Summary" → `POST /summaries/:meetingId/ai-summary` → overview paragraph + key decisions list
+- Meeting review draft cards: form view by default, "Edit JSON" / "Form" toggle per card
+- `extractPropValue` helper parses all Notion property types for the form view
+
+### Batch 2 — Role system
+- 13 default roles in 4-level hierarchy (PM → Board → Leads → Members) seeded per project
+- Auto-seed for existing projects (idempotent: if no roles found, fetch owner and seed)
+- Role claim request flow: member submits → PM approves/rejects → member role updated on approve
+- PM approval panel in workspace members widget (amber, shows pending requests only — bug fixed this session)
+- Email search with debounce + user preview card for add-member flow
+- Members list grouped by role level with color badges, Crown/Shield icons
+
+### Batch 3 — Channels + Zoom ACL
+- `ChatChannel` model (GENERAL / MANAGEMENT / TEAM) + `ProjectMessage.channelId` nullable FK
+- Channels auto-provisioned idempotently on every `getChannels` call (upsert pattern)
+- Access control: GENERAL → all; MANAGEMENT → level ≤ 1; TEAM → same team (board always passes)
+- Legacy messages (channelId=null) surfaced in GENERAL channel
+- `ProjectMeeting` model stores ACL (organizerTeam, allowedTeams) per Zoom meeting
+- Schedule modal: "Who can join?" toggle (whole project / my team only) + team invite pills
+- `listProjectMeetings` cross-references Zoom API with local ACL; meetings from other projects hidden
+- Zoom room page uses ACL-filtered endpoint; non-eligible users see "no access" empty state
+
+### Batch 4 — Notion task stats + Link task to branch UI
+- `NotionTask` model + migration `add_notion_tasks` (cached task snapshot: title, status, statusGroup, assigneeEmails/Names)
+- `NotionService.queryDatabaseTasks()` — raw REST query (SDK v5 dropped `databases.query`), extracts title/status/people; `normalizeStatusGroup()` maps to todo/in_progress/done
+- New `tasks` module: `POST /projects/:id/notion/sync-tasks`, `GET .../tasks`, `GET .../schema`
+- Dashboard task cards (Active/Completed/In Progress) now count the user's real Notion tasks (assignee match by email, name fallback). Dashboard `tasks` keys renamed → `{ active, completed, inProgress }`
+- GitHub widget in workspace: Activity / Tasks tab toggle; Tasks tab lists live branches (via new `GET /api/github/:id/branches`) with linked badges; "Link" opens a modal (pick Notion task, target branch, completion property+value from schema) → `POST /api/github/:id/task-branch-sync`
+
+### Batch 5 — Auto-sync + per-branch task progress
+- Background poller `TasksScheduler` (OnModuleInit + setInterval, no extra dep): syncs every project with a `notionDbId` every 5 min, isolated failures, overlap guard. Verified live: "Synced 1/1 projects".
+- `NotionService.resolveDatabaseIds()` — fixes the real-data case where `notionDbId` is a **page** holding child databases (not a database). Sync now resolves → queries each child db → tags each task with its own `notionDatabaseId`.
+- Schema endpoint is now per-database: `GET /projects/:id/notion/schema/:databaseId` (link form fetches the selected task's db schema).
+- Branch list shows linked-task **title** + colored sync-state pill (Linked/In progress/In review/Done) and an **unlink** (X) button → new `DELETE /api/github/:id/task-branch-sync/:syncId`.
+
+## Pending Next Steps
+- (none queued). Future ideas: filter the link-task picker to task-like databases only; Notion webhook for true realtime; persist Notion assignee→Orchestra user mapping for name-based assignees.
 
 ## Current Status
-- Backend is demo-ready. All endpoints verified except Zoom transcript retrieval (needs completed meeting — code is complete).
-- Temp GitHub demo changes (commented webhook verify + review check) should be reverted after presentation.
-- P7 (Notion property payload) works for simple props; complex types may need attention.
-- P9 (hardening) and P10 (automated Zoom pipeline) are post-demo tasks.
-
-## Undone Tasks
-
-### ✅ P0: Handoff / Workspace Reconciliation
-- Skipped — rebuilt Zoom from scratch.
-
-### ✅ P1: Runtime Route Wiring
-- Fixed `zoom.module.ts`, created `zoom.controller.ts`, `ZoomModule` in `AppModule`.
-- `SummariesModule` and `TranscriptsModule` already wired.
-
-### ✅ P2: Transcript Contract Fix
-- `meetingId` is `string` across TranscriptsService, SummariesService, ZoomService.
-
-### ✅ P3: Endpoint Demo Checklist
-- All endpoints in `ARTIFACTS/DEMO_SCRIPT.md` with copy-paste curls.
-
-### ✅ P4: External Credentials and Demo Data
-- `.env` configured: DATABASE_URL, NOTION_API_KEY, GEMINI_API_KEY, ZOOM creds.
-- DB seeded: demo project, repository, user with fake githubToken.
-
-### ✅ P5: Zoom Transcript Retrieval
-- Full Zoom integration: schedule, list, recordings, transcript → TranscriptsService.
-- Credentials live (schedule + list tested). Transcript pending completed meeting.
-
-### ✅ P6: AI Note Taker E2E
-- All steps tested: upload → Gemini draft → edit/cancel/approve → Notion write-back.
-
-### ⚠️ P7: Notion Property Payload Conversion
-- Works for simple properties (status, checkbox). Complex types not fully tested.
-
-### ✅ P8: GitHub -> Notion Live Verification
-- Simulated webhook flow works end-to-end: link → PR opened → PR merged → Notion Done.
-
-### ✅ P10: Automated Zoom → Gemini Pipeline
-- Add `POST /zoom/webhook` endpoint with Zoom webhook signature verification (Secret Token).
-- Subscribe to `recording.completed` event in Zoom Marketplace.
-- On webhook: extract meetingId → `retrieveTranscript()` → `TranscriptsService` → `SummariesService.generate()` → drafts ready.
-- Store blockId/template mapping per meeting (DB column or passed at schedule time).
-- Requires public URL (ngrok for dev, deployed URL for prod).
-
-### P11: Migrate from Gemini to Groq (Post-Demo)
-- Gemini free tier is unreliable (429 quota errors). Replace with Groq.
-- Groq free tier: no credit card, ~30 req/min, Llama 3 70B.
-- Sign up at https://console.groq.com, get API key, set `GROQ_API_KEY` in `.env`.
-- Install `groq-sdk`, rewrite `gemini.service.ts` to use Groq's OpenAI-compatible chat API.
-- Keep same `summarize(text, schemaContext)` interface and mock fallback.
-
-### P9: Lower-Priority Hardening After Presentation
-- Replace in-memory transcript/summary/draft storage with Prisma persistence.
-- Add deeper schema-aware Gemini draft validation.
-- Move hardcoded JWT secret to env.
-- Add JWT guards to routes that assume `req.user`.
-- Add proper RBAC/project authorization checks.
-- Encrypt stored third-party API tokens.
-- Replace generic `Error` throws with specific Nest exceptions.
+- Backend running on :3000, frontend on :3001 (both restarted clean after the `add_notion_tasks` migration).
+- Note: Notion assignee email is only available when the integration has "read user information including email" capability; name fallback covers the rest.
+- Tasks must be synced (Tasks tab → "Sync tasks", or `POST sync-tasks`) before dashboard stats populate.
 
 ## Temporary Decisions
-- One Notion task page maps to one active GitHub branch in MVP.
-- `repoId + branchName` is the unique identity for a branch mapping inside the local database.
-- `pull_request_review` is treated as an approval signal, not automatic completion.
-- Final task completion should depend on merge into `targetBranch`, not approval alone.
-- `targetBranch` defaults to `main` but can be configured per sync row.
-- For the presentation, prioritize a reliable endpoint demo over perfect production architecture.
-- If live Zoom is blocked by credentials, use manual transcript upload as the fallback demo path.
-- If live GitHub webhook delivery is blocked by networking, use a controlled webhook request or tested service behavior as the fallback.
-- Keep Gemini draft data editable and human-reviewable before Notion write-back.
-- Completion behavior for GitHub-linked Notion tasks is now stored per mapping as:
-  - `completionPropertyName`
-  - `completionPropertyType`
-  - `completionValue`
-- Webhook requests should be verified with GitHub HMAC signature before processing events.
-- For this environment, Supabase session pooler is the practical connection method when direct DB host access is flaky/unreachable.
+- GENERAL channel includes `channelId=null` (legacy) messages for backwards compatibility
+- Zoom ACL is stored in `ProjectMeeting` table (not native Zoom ACL — Zoom doesn't support per-user participant filtering via API)
+- Board (level ≤ 1) bypasses all channel and meeting ACLs
+- Channel provisioning runs on every channel fetch (idempotent upsert, low cost)
+- `teamForRole` returns `null` for management roles (PM, Tech Lead, Secretary) — they belong to no single team
 
-## Relevant Files
-- `backend/prisma/schema.prisma`
-- `backend/prisma/migrations/20260327185144_add_task_branch_sync/migration.sql`
-- `backend/prisma/migrations/20260331110000_add_task_completion_mapping/migration.sql`
-- `backend/src/app.module.ts`
+## Relevant Files (this session)
+- `backend/prisma/schema.prisma` — ProjectRole, RoleRequest, ChatChannel, ProjectMeeting, enums
+- `backend/src/roles/roles.service.ts` — DEFAULT_ROLES, ROLE_TEAM, TEAM_LABEL, teamForRole, MemberContext, seed/request/review logic
+- `backend/src/roles/roles.controller.ts`
+- `backend/src/roles/roles.module.ts`
+- `backend/src/chat/chat.service.ts` — canAccessChannel, ensureChannels, resolveChannel, channel-aware getMessages/sendMessage
+- `backend/src/chat/chat.controller.ts` — channel routes
+- `backend/src/chat/chat.module.ts`
+- `backend/src/zoom/zoom.service.ts` — scheduleMeeting (ACL fields), canAccessMeeting, listProjectMeetings
+- `backend/src/zoom/zoom.controller.ts` — GET /zoom/projects/:projectId/meetings
 - `backend/src/zoom/zoom.module.ts`
-- `backend/src/zoom/zoom.service.ts`
-- `backend/src/zoom/zoom.controller.ts`
-- `backend/src/transcript/transcripts.module.ts`
-- `backend/src/transcript/transcripts.service.ts`
-- `backend/src/transcript/transcripts.controller.ts`
-- `backend/src/summaries/summaries.module.ts`
-- `backend/src/summaries/summaries.service.ts`
-- `backend/src/summaries/summaries.controller.ts`
-- `backend/src/gemini/gemini.service.ts`
-- `backend/src/notion/notion.service.ts`
-- `backend/src/github/github.service.ts`
-- `backend/src/github/github.module.ts`
-- `backend/src/github/github.controller.ts`
-- `backend/src/github/dto/link-task-branch.dto.ts`
-- `backend/src/github/github.service.spec.ts`
-- `backend/src/github/github.controller.spec.ts`
-- `backend/src/main.ts`
-- `backend/package.json`
+- `backend/src/zoom/dto/schedule-meeting.dto.ts`
+- `backend/src/projects/projects.service.ts` — seedProjectRoles call after createProject
+- `backend/src/summaries/summaries.service.ts` — summarizeTranscript
+- `backend/src/summaries/summaries.controller.ts` — POST /summaries/:meetingId/ai-summary
+- `backend/src/gemini/gemini.service.ts` — quickSummarize (Groq, mock mode)
+- `frontend/app/components/Logo.tsx`
+- `frontend/app/components/Sidebar.tsx`
+- `frontend/app/(dashboard)/workspace/[projectId]/page.tsx` — role system UI, meetings ACL, email search
+- `frontend/app/(dashboard)/workspace/[projectId]/chat/page.tsx` — channel sidebar UI
+- `frontend/app/(dashboard)/workspace/[projectId]/zoom/[meetingId]/page.tsx` — ACL endpoint
+- `frontend/app/(dashboard)/workspace/[projectId]/meeting-result-review/page.tsx` — AI summary card, form view
+
+## Previously Completed (carried forward)
+- Auth, Zoom, AI Note Taker, GitHub → Notion integrations (demo-ready)
+- Groq migration for Gemini service (P11 done)
+- All P0–P8 tasks from initial session
+- P10: Zoom webhook → auto pipeline

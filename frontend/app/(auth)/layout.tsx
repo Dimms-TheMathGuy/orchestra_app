@@ -34,8 +34,13 @@ export default function AuthLayout({
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      {children}
+    <div className="relative min-h-screen overflow-hidden bg-background flex items-center justify-center p-4">
+      {/* Decorative brand blobs */}
+      <div className="brand-blob -top-[10%] -left-[10%] h-[45%] w-[40%] bg-[#7c3aed]/15" />
+      <div className="brand-blob top-[55%] -right-[8%] h-[50%] w-[35%] bg-[#2563eb]/15" />
+      <div className="relative z-10 w-full flex items-center justify-center">
+        {children}
+      </div>
     </div>
   )
 }

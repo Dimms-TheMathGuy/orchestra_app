@@ -1,0 +1,2488 @@
+/* Project workspace Light */
+
+position: relative;
+width: 1315px;
+height: 1560px;
+
+background: #FFFFFF;
+
+
+/* Personal Info */
+
+position: absolute;
+width: 370px;
+height: 182px;
+left: 51px;
+top: 135px;
+
+
+
+/* Rectangle 19 */
+
+position: absolute;
+width: 370px;
+height: 179px;
+left: 51px;
+top: 135px;
+
+background: linear-gradient(117.18deg, rgba(219, 255, 246, 0.9) -2.39%, rgba(240, 240, 240, 0.09) 100%);
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 20px -1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(25px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* PT. Belum Mandiri Finance */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 72px;
+top: 266px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 18px;
+line-height: 22px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* Staff Divisi IT */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 72px;
+top: 288px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.57);
+
+
+
+/* Group 1 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 72px;
+top: 152px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 178px;
+top: 168px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Project Manager */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 178px;
+top: 195px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 178px;
+top: 217px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 72px;
+top: 152px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Project A */
+
+position: absolute;
+width: 179px;
+height: 50px;
+left: 556px;
+top: 44px;
+
+font-family: 'Plus Jakarta Sans';
+font-style: normal;
+font-weight: 700;
+font-size: 40px;
+line-height: 50px;
+
+color: #000000;
+
+opacity: 0.8;
+border: 1px solid rgba(57, 57, 57, 0.4);
+text-shadow: 0px 4px 40px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+
+
+/* List Member */
+
+position: absolute;
+width: 370px;
+height: 1178px;
+left: 51px;
+top: 342px;
+
+
+
+/* Rectangle 26 */
+
+position: absolute;
+width: 370px;
+height: 1178px;
+left: 51px;
+top: 342px;
+
+background: linear-gradient(118.3deg, rgba(255, 244, 229, 0.9) -41.98%, rgba(240, 240, 240, 0.09) 100%);
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 20px -1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* Project Members */
+
+position: absolute;
+width: 251px;
+height: 36px;
+left: 116px;
+top: 363px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 30px;
+line-height: 36px;
+
+color: #000000;
+
+
+
+/* Member 1 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 428px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 444px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Project Manager */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 471px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 493px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 428px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 2 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 551px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 567px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Vice Project Manager */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 594px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 616px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 551px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 3 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 674px;
+
+
+
+/* Inara Rusli */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 690px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 717px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 739px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 674px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 4 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 788px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 804px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 831px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 853px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 788px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 5 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 911px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 927px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 954px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 976px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 911px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 6 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 1034px;
+
+
+
+/* Inara Jule */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 1050px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 1077px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 1099px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 1034px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 7 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 1157px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 1173px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 1200px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 1222px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 1157px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 8 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 1280px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 1296px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 1323px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 1345px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 1280px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Member 9 */
+
+position: absolute;
+width: 290px;
+height: 94px;
+left: 81px;
+top: 1403px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 117px;
+height: 29px;
+left: 187px;
+top: 1419px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: #000000;
+
+
+
+/* Cloud Engineer */
+
+position: absolute;
+width: 184px;
+height: 29px;
+left: 187px;
+top: 1446px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 14px;
+line-height: 17px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ina.kusuma@perusahaan1 */
+
+position: absolute;
+width: 163px;
+height: 29px;
+left: 187px;
+top: 1468px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: #958E8E;
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 80px;
+height: 80px;
+left: 81px;
+top: 1403px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Zoom Widget */
+
+position: absolute;
+width: 400px;
+height: 695px;
+left: 441px;
+top: 819px;
+
+
+
+/* Rectangle 27 */
+
+position: absolute;
+width: 397px;
+height: 583px;
+left: 443px;
+top: 931px;
+
+background: linear-gradient(339.32deg, rgba(83, 124, 221, 0.9) -97.75%, rgba(240, 240, 240, 0.09) 175.04%);
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 20px -1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(25px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* Rectangle 22 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 400px;
+height: 170px;
+left: 441px;
+top: 819px;
+
+background: rgba(43, 94, 214, 0.8);
+border: 1.5px solid rgba(255, 255, 255, 0.4);
+box-shadow: 0px 4px 35px rgba(0, 0, 0, 0.58);
+filter: blur(0.75px);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px 17px 30px 30px;
+
+
+/* Rectangle 28 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 111px;
+height: 27px;
+left: 463px;
+top: 1004px;
+
+background: #537DDE;
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 9px;
+
+
+/* Rectangle 29 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 111px;
+height: 27px;
+left: 587px;
+top: 1004px;
+
+background: #B0B0B0;
+border: 1px solid rgba(255, 255, 255, 0.2);
+border-radius: 9px;
+
+
+/* Upcomings */
+
+position: absolute;
+width: 74px;
+height: 19px;
+left: 482px;
+top: 1010px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(255, 255, 255, 0.8);
+
+
+
+/* Past */
+
+position: absolute;
+width: 74px;
+height: 19px;
+left: 604px;
+top: 1009px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 13px;
+line-height: 16px;
+text-align: center;
+
+color: #4A4A4A;
+
+
+
+/* Frame 1 */
+
+position: absolute;
+width: 374px;
+height: 452px;
+left: 454px;
+top: 1045px;
+
+
+
+/* Kotak Meeting */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 0px;
+
+
+
+/* Rectangle 30 */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 0px;
+
+background: linear-gradient(180deg, #527CDD 0%, #BCD0FF 100%);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 9px;
+
+
+/* Rectangle 31 */
+
+position: absolute;
+width: 365px;
+height: 171px;
+left: 9px;
+top: 0px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 0px 9px 9px 0px;
+
+
+/* API Integration Plan */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 28px;
+top: 12px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 22px;
+
+color: rgba(0, 0, 0, 0.7);
+
+
+
+/* Tomorrow, 8:00 - 10:00 WIB */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 28px;
+top: 36px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* Rectangle 32 */
+
+position: absolute;
+width: 154px;
+height: 39px;
+left: 29px;
+top: 80px;
+
+background: #B18BB8;
+border-radius: 60px;
+
+
+/* Rectangle 33 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 87px;
+height: 24px;
+left: 28px;
+top: 138px;
+
+background: #FFFFFF;
+border: 1px solid #B18BB8;
+border-radius: 60px;
+
+
+/* Back-End */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 42px;
+top: 141px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* +15 */
+
+position: absolute;
+width: 33px;
+height: 19px;
+left: 153px;
+top: 93px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 500;
+font-size: 11px;
+line-height: 13px;
+
+color: rgba(255, 255, 255, 0.8);
+
+
+
+/* Muka muka */
+
+position: absolute;
+width: 78px;
+height: 35px;
+left: 32px;
+top: 82px;
+
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 32px;
+top: 82px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 54px;
+top: 82px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 18 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 75px;
+top: 82px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 93px;
+top: 82px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 115px;
+top: 82px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Vector */
+
+position: absolute;
+left: 87.17%;
+right: 4.88%;
+top: 30.75%;
+bottom: 65.17%;
+
+background: #2D62DA;
+
+
+/* streamline-plump:call-hang-up-solid */
+
+position: absolute;
+width: 22px;
+height: 22px;
+left: 286px;
+top: 137px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 3.12%;
+right: 1.04%;
+top: 3.12%;
+bottom: 1.04%;
+
+background: rgba(179, 21, 23, 0.85);
+
+
+/* mage:chevron-down-square-fill */
+
+position: absolute;
+width: 20px;
+height: 20px;
+left: 340px;
+top: 15px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 8.33%;
+right: 8.33%;
+top: 8.33%;
+bottom: 8.33%;
+
+background: rgba(0, 0, 0, 0.7);
+
+
+/* Kotak Meeting */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 186px;
+
+
+
+/* Rectangle 30 */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 186px;
+
+background: linear-gradient(180deg, #527CDD 0%, #BCD0FF 100%);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 9px;
+
+
+/* Rectangle 31 */
+
+position: absolute;
+width: 365px;
+height: 171px;
+left: 9px;
+top: 186px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 0px 9px 9px 0px;
+
+
+/* UI Realization */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 28px;
+top: 198px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 22px;
+
+color: rgba(0, 0, 0, 0.7);
+
+
+
+/* Thursday, 35 March */
+
+position: absolute;
+width: 267px;
+height: 20px;
+left: 28px;
+top: 222px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* 13:00 - 16:00 WIB */
+
+position: absolute;
+width: 118px;
+height: 20px;
+left: 30px;
+top: 241px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 11px;
+line-height: 13px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* Rectangle 32 */
+
+position: absolute;
+width: 154px;
+height: 39px;
+left: 29px;
+top: 266px;
+
+background: rgba(255, 67, 0, 0.75);
+border-radius: 60px;
+
+
+/* Rectangle 33 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 87px;
+height: 24px;
+left: 28px;
+top: 324px;
+
+background: #FFFFFF;
+border: 1px solid #FF7240;
+border-radius: 60px;
+
+
+/* Front-End */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 42px;
+top: 327px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* +15 */
+
+position: absolute;
+width: 33px;
+height: 19px;
+left: 153px;
+top: 279px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 500;
+font-size: 11px;
+line-height: 13px;
+
+color: rgba(255, 255, 255, 0.8);
+
+
+
+/* Muka muka */
+
+position: absolute;
+width: 78px;
+height: 35px;
+left: 32px;
+top: 268px;
+
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 32px;
+top: 268px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 54px;
+top: 268px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 18 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 75px;
+top: 268px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 93px;
+top: 268px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 115px;
+top: 268px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Vector */
+
+position: absolute;
+left: 87.17%;
+right: 4.88%;
+top: 71.9%;
+bottom: 24.02%;
+
+background: #2D62DA;
+
+
+/* streamline-plump:call-hang-up-solid */
+
+position: absolute;
+width: 22px;
+height: 22px;
+left: 286px;
+top: 323px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 3.12%;
+right: 1.04%;
+top: 3.12%;
+bottom: 1.04%;
+
+background: rgba(179, 21, 23, 0.85);
+
+
+/* mage:chevron-down-square-fill */
+
+position: absolute;
+width: 20px;
+height: 20px;
+left: 340px;
+top: 201px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 8.33%;
+right: 8.33%;
+top: 8.33%;
+bottom: 8.33%;
+
+background: rgba(0, 0, 0, 0.7);
+
+
+/* Kotak Meeting */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 374px;
+
+
+
+/* Rectangle 30 */
+
+position: absolute;
+width: 374px;
+height: 171px;
+left: 0px;
+top: 374px;
+
+background: linear-gradient(180deg, #527CDD 0%, #BCD0FF 100%);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 9px;
+
+
+/* Rectangle 31 */
+
+position: absolute;
+width: 365px;
+height: 171px;
+left: 9px;
+top: 374px;
+
+background: #FFFFFF;
+box-shadow: 0px 4px 5px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 0px 9px 9px 0px;
+
+
+/* UX Revision */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 28px;
+top: 386px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 22px;
+
+color: rgba(0, 0, 0, 0.7);
+
+
+
+/* Thursday, 35 March */
+
+position: absolute;
+width: 267px;
+height: 20px;
+left: 28px;
+top: 410px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* 13:00 - 16:00 WIB */
+
+position: absolute;
+width: 118px;
+height: 20px;
+left: 30px;
+top: 429px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 11px;
+line-height: 13px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* Rectangle 32 */
+
+position: absolute;
+width: 154px;
+height: 39px;
+left: 29px;
+top: 454px;
+
+background: rgba(255, 67, 0, 0.75);
+border-radius: 60px;
+
+
+/* Rectangle 33 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 87px;
+height: 24px;
+left: 28px;
+top: 512px;
+
+background: #FFFFFF;
+border: 1px solid #FF7240;
+border-radius: 60px;
+
+
+/* Front-End */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 42px;
+top: 515px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 16px;
+
+color: rgba(0, 0, 0, 0.54);
+
+
+
+/* +15 */
+
+position: absolute;
+width: 33px;
+height: 19px;
+left: 153px;
+top: 467px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 500;
+font-size: 11px;
+line-height: 13px;
+
+color: rgba(255, 255, 255, 0.8);
+
+
+
+/* Muka muka */
+
+position: absolute;
+width: 78px;
+height: 35px;
+left: 32px;
+top: 456px;
+
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 32px;
+top: 456px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 54px;
+top: 456px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 18 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 75px;
+top: 456px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 16 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 93px;
+top: 456px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Ellipse 17 */
+
+position: absolute;
+width: 35px;
+height: 35px;
+left: 115px;
+top: 456px;
+
+background: url(downloadd.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Vector */
+
+position: absolute;
+left: 87.17%;
+right: 4.88%;
+top: 113.5%;
+bottom: -17.57%;
+
+background: #2D62DA;
+
+
+/* streamline-plump:call-hang-up-solid */
+
+position: absolute;
+width: 22px;
+height: 22px;
+left: 286px;
+top: 511px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 3.12%;
+right: 1.04%;
+top: 3.12%;
+bottom: 1.04%;
+
+background: rgba(179, 21, 23, 0.85);
+
+
+/* mage:chevron-down-square-fill */
+
+position: absolute;
+width: 20px;
+height: 20px;
+left: 340px;
+top: 389px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 8.33%;
+right: 8.33%;
+top: 8.33%;
+bottom: 8.33%;
+
+background: rgba(0, 0, 0, 0.7);
+
+
+/* Group 2 */
+
+position: absolute;
+width: 289px;
+height: 42px;
+left: 495px;
+top: 851px;
+
+
+
+/* Zoom Meetings */
+
+position: absolute;
+width: 245px;
+height: 42px;
+left: 495px;
+top: 851px;
+
+font-family: 'Lato';
+font-style: normal;
+font-weight: 700;
+font-size: 35px;
+line-height: 42px;
+/* identical to box height */
+text-align: center;
+
+color: rgba(253, 253, 253, 0.98);
+
+
+
+/* Vector */
+
+position: absolute;
+height: 22px;
+left: 56.96%;
+right: 40.38%;
+top: calc(50% - 22px/2 + 97px);
+
+background: rgba(255, 255, 255, 0.85);
+box-shadow: inset 0px 4px 3px rgba(0, 0, 0, 0.3);
+
+
+/* Group 3 */
+
+position: absolute;
+width: 141px;
+height: 27px;
+left: 486px;
+top: 940px;
+
+
+
+/* Rectangle 34 */
+
+position: absolute;
+width: 141px;
+height: 27px;
+left: 486px;
+top: 940px;
+
+background: #F9F9F9;
+box-shadow: 0px 4px 10px -3px rgba(0, 0, 0, 0.25);
+border-radius: 15px;
+
+
+/* Start new meeting */
+
+position: absolute;
+width: 106px;
+height: 15px;
+left: 520px;
+top: 945px;
+
+font-family: 'Lato';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 14px;
+/* identical to box height */
+
+color: #49257E;
+
+
+
+/* Group 4 */
+
+position: absolute;
+width: 141px;
+height: 27px;
+left: 651px;
+top: 939px;
+
+
+
+/* Rectangle 34 */
+
+position: absolute;
+width: 141px;
+height: 27px;
+left: 651px;
+top: 939px;
+
+background: #F9F9F9;
+box-shadow: 0px 4px 10px -3px rgba(0, 0, 0, 0.25);
+border-radius: 15px;
+
+
+/* Schedule a meeting */
+
+position: absolute;
+width: 106px;
+height: 15px;
+left: 682px;
+top: 944px;
+
+font-family: 'Lato';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 14px;
+/* identical to box height */
+
+color: #49257E;
+
+
+
+/* Vector */
+
+position: absolute;
+height: 16px;
+left: 50.27%;
+right: 48.52%;
+top: calc(50% - 16px/2 + 172px);
+
+background: #49257E;
+
+
+/* Gemini Widget */
+
+position: absolute;
+width: 404px;
+height: 185px;
+left: 861px;
+top: 1330px;
+
+
+
+/* Rectangle 23 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 400px;
+height: 185px;
+left: 865px;
+top: 1330px;
+
+background: linear-gradient(256.37deg, rgba(231, 82, 96, 0.35) -2.82%, rgba(114, 189, 115, 0.15) 22.25%, rgba(23, 136, 255, 0.3) 64.03%);
+opacity: 0.85;
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 40px 1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* image 3 */
+
+position: absolute;
+width: 65px;
+height: 37px;
+left: 861px;
+top: 1340px;
+
+background: url(image.png);
+border-radius: 17px;
+transform: matrix(1, 0, 0, -1, 0, 0);
+
+
+/* Gemini Assistant */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 920px;
+top: 1348px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 20px;
+line-height: 24px;
+
+color: rgba(0, 0, 0, 0.8);
+
+
+
+/* Github Widget */
+
+position: absolute;
+width: 400px;
+height: 312px;
+left: 865px;
+top: 1004px;
+
+
+
+/* Rectangle 25 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 400px;
+height: 312px;
+left: 865px;
+top: 1004px;
+
+background: #1E1E1E;
+opacity: 0.75;
+border: 1.5px solid rgba(255, 249, 249, 0.5);
+box-shadow: 0px 4px 40px 1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* ri:github-fill */
+
+position: absolute;
+width: 81.61px;
+height: 81.61px;
+left: 993.7px;
+top: 1087.18px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 33.98%;
+right: -17.31%;
+top: 33.98%;
+bottom: -15.26%;
+
+background: #FFFFFF;
+box-shadow: inset 0px 4px 10px rgba(0, 0, 0, 0.25);
+
+
+/* No Repository Linked */
+
+position: absolute;
+width: 278px;
+height: 18.21px;
+left: 926px;
+top: 1181.03px;
+
+font-family: 'Geist Mono';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 23px;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* Link your repo? → */
+
+position: absolute;
+width: 278px;
+height: 18.21px;
+left: 931px;
+top: 1203.47px;
+
+font-family: 'Geist Mono';
+font-style: normal;
+font-weight: 400;
+font-size: 12px;
+line-height: 16px;
+text-align: center;
+
+color: #FFFFFF;
+
+
+
+/* Notion widget */
+
+position: absolute;
+width: 827px;
+height: 665px;
+left: 441px;
+top: 135px;
+
+
+
+/* Rectangle 21 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 827px;
+height: 665px;
+left: 441px;
+top: 135px;
+
+background: linear-gradient(179.47deg, rgba(255, 196, 166, 0.36) -12.25%, rgba(255, 221, 209, 0.28) 108.67%);
+opacity: 0.95;
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 40px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* image 4 */
+
+position: absolute;
+width: 808px;
+height: 595px;
+left: 451px;
+top: 196px;
+
+background: url(image.png);
+border-radius: 17px;
+
+
+/* devicon-plain:notion */
+
+position: absolute;
+width: 39px;
+height: 39px;
+left: 464px;
+top: 147px;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 1.76%;
+right: 1.38%;
+top: 0.2%;
+bottom: -0.2%;
+
+background: rgba(0, 0, 0, 0.75);
+
+
+/* Project and Task Manager */
+
+position: absolute;
+width: 338px;
+height: 29px;
+left: 513px;
+top: 152px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 25px;
+line-height: 30px;
+
+color: rgba(0, 0, 0, 0.79);
+
+
+
+/* mingcute:settings-5-fill */
+
+position: absolute;
+width: 55px;
+height: 55px;
+left: 1215px;
+top: 35px;
+
+
+
+/* Group */
+
+position: absolute;
+left: 9.43%;
+right: 9.43%;
+top: 9.43%;
+bottom: 0.78%;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 50.32%;
+right: 46.2%;
+top: 96.43%;
+bottom: 0.78%;
+
+
+
+/* Vector */
+
+position: absolute;
+left: 9.43%;
+right: 9.43%;
+top: 9.43%;
+bottom: 9.43%;
+
+background: rgba(0, 0, 0, 0.72);
+
+
+/* Vector */
+
+position: absolute;
+left: 4.08%;
+right: 94.19%;
+top: 2.82%;
+bottom: 94.53%;
+
+background: rgba(0, 0, 0, 0.8);
+
+
+/* Vector */
+
+position: absolute;
+left: 2.51%;
+right: 95.03%;
+top: 3.44%;
+bottom: 95.15%;
+
+background: rgba(0, 0, 0, 0.8);
+
+
+/* Rectangle 23 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 400px;
+height: 177px;
+left: 859px;
+top: 816px;
+
+background: #EFEEF0;
+opacity: 0.85;
+border: 1.5px solid rgba(255, 255, 255, 0.5);
+box-shadow: 0px 4px 40px 1px rgba(0, 0, 0, 0.25);
+backdrop-filter: blur(20px);
+/* Note: backdrop-filter has minimal browser support */
+border-radius: 17px;
+
+
+/* Member 1 */
+
+position: absolute;
+width: 332px;
+height: 36px;
+left: 868px;
+top: 871px;
+
+
+
+/* Ina Kusuma */
+
+position: absolute;
+width: 84.72px;
+height: 11.11px;
+left: 910px;
+top: 880px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 9px;
+line-height: 11px;
+
+color: #000000;
+
+
+
+/* I have some technical difficulty with the prototype, could you fix the motions, Dina? */
+
+position: absolute;
+width: 290px;
+height: 8px;
+left: 910px;
+top: 891px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 7px;
+line-height: 8px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 36px;
+height: 36px;
+left: 868px;
+top: 871px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Group Chat */
+
+position: absolute;
+width: 267px;
+height: 29px;
+left: 867px;
+top: 827px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 22px;
+
+color: rgba(0, 0, 0, 0.7);
+
+
+
+/* 08:45 PM */
+
+position: absolute;
+width: 27px;
+height: 6px;
+left: 964px;
+top: 883px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 5px;
+line-height: 6px;
+/* identical to box height */
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Member 2 */
+
+position: absolute;
+width: 332px;
+height: 36px;
+left: 868px;
+top: 915px;
+
+
+
+/* Dinda Sali */
+
+position: absolute;
+width: 84.72px;
+height: 11.11px;
+left: 910px;
+top: 924px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 9px;
+line-height: 11px;
+
+color: #000000;
+
+
+
+/* Sure, inform me which page you found problematic. */
+
+position: absolute;
+width: 290px;
+height: 8px;
+left: 910px;
+top: 935px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 7px;
+line-height: 8px;
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Ellipse 1 */
+
+position: absolute;
+width: 36px;
+height: 36px;
+left: 868px;
+top: 915px;
+
+background: url(3a84438c147f5cc10f1453a3b1b05090.jpg);
+box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+
+
+/* Just now */
+
+position: absolute;
+width: 27px;
+height: 6px;
+left: 956px;
+top: 927px;
+
+font-family: 'Inter';
+font-style: normal;
+font-weight: 700;
+font-size: 5px;
+line-height: 6px;
+/* identical to box height */
+
+color: rgba(0, 0, 0, 0.65);
+
+
+
+/* Rectangle 34 */
+
+position: absolute;
+width: 68px;
+height: 13px;
+left: 1166px;
+top: 963px;
+
+background: #F9F9F9;
+box-shadow: 0px 4px 10px -3px rgba(0, 0, 0, 0.25);
+border-radius: 15px;
+
+
+/* Enter chat */
+
+position: absolute;
+width: 106px;
+height: 15px;
+left: 1181px;
+top: 965px;
+
+font-family: 'Lato';
+font-style: normal;
+font-weight: 500;
+font-size: 8px;
+line-height: 10px;
+
+color: #49257E;
+

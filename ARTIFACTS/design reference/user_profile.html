@@ -1,0 +1,287 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Profile | ORCHESTRA</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Manrope:wght@700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-fixed-variant": "#002570",
+                    "inverse-surface": "#0b0e12",
+                    "on-error": "#ffefee",
+                    "inverse-primary": "#638aff",
+                    "surface-container-high": "#e0e2ea",
+                    "on-background": "#2c2f33",
+                    "secondary-container": "#d7e3f8",
+                    "on-tertiary": "#f0f2fc",
+                    "surface-tint": "#1f52c9",
+                    "surface-variant": "#dadde5",
+                    "tertiary-fixed-dim": "#d2d4de",
+                    "on-surface": "#2c2f33",
+                    "tertiary": "#585b64",
+                    "on-tertiary-fixed-variant": "#585b64",
+                    "on-secondary-fixed": "#344050",
+                    "primary-fixed": "#7c9cff",
+                    "secondary-fixed-dim": "#c9d5e9",
+                    "tertiary-dim": "#4c5058",
+                    "surface-container-highest": "#dadde5",
+                    "surface-container-low": "#eff0f7",
+                    "on-tertiary-fixed": "#3c3f47",
+                    "on-secondary-container": "#475363",
+                    "primary-fixed-dim": "#678dff",
+                    "on-primary": "#f1f2ff",
+                    "on-tertiary-container": "#4e525a",
+                    "inverse-on-surface": "#9b9da2",
+                    "tertiary-fixed": "#e0e2ec",
+                    "on-primary-fixed": "#000000",
+                    "secondary-dim": "#455061",
+                    "error-dim": "#9f0519",
+                    "on-primary-container": "#001d5c",
+                    "error": "#b31b25",
+                    "primary-container": "#7c9cff",
+                    "secondary": "#505c6d",
+                    "on-surface-variant": "#595b61",
+                    "primary": "#1f52c9",
+                    "surface-dim": "#d1d4dd",
+                    "outline": "#74777c",
+                    "on-secondary": "#edf3ff",
+                    "primary-dim": "#0245bd",
+                    "tertiary-container": "#e0e2ec",
+                    "surface-container": "#e6e8ef",
+                    "on-error-container": "#570008",
+                    "secondary-fixed": "#d7e3f8",
+                    "on-secondary-fixed-variant": "#505c6d",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#abadb3",
+                    "error-container": "#fb5151",
+                    "background": "#f5f6fc",
+                    "surface-bright": "#f5f6fc",
+                    "surface": "#f5f6fc"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Inter"],
+                    "label": ["Inter"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #F8FAFC; /* Cold White requirement */
+        }
+    </style>
+</head>
+<body class="font-body text-on-background selection:bg-primary-container selection:text-on-primary-container">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-screen w-64 z-50 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full p-4 gap-y-2">
+<div class="flex items-center gap-3 px-2 py-4 mb-4">
+<div class="w-10 h-10 rounded-lg overflow-hidden flex items-center justify-center"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuAaJ52BjV_-8sN5HIsGqwVcDlPEzvoDut4GbbnxNkSfQr4ZYF7dQvq1HyG9mgA-rs-ONKw8ksmlSXQTcRL10v46dxvjuwZfItdYL0D0p4AglplZbjLWAxrnZr-dWGLye0WPPOeqU3X-u88H-7l_2fmiIkoGwue4dTRKyYlcHt-Uf41PT0vVSJFS8PeIgVipClTKX_t0qzghTCzR5CRWPU-nzeWgWskqNCtrz6Nt2uxHOMhxSjb07NJX6H0WpWDzsOfACTOYFMLY0p_O" alt="ORCHESTRA Logo" class="w-full h-full object-cover"></div>
+<div>
+<h1 class="font-headline font-extrabold text-blue-700 dark:text-blue-400 text-lg leading-tight">ORCHESTRA</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant font-bold">Enterprise Tier</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="grid_view">grid_view</span>
+                Workspace
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+                Analytics
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="account_tree">account_tree</span>
+                Orchestration
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+                Resources
+            </a>
+<!-- Active State: Settings (Profile Page) -->
+<a class="flex items-center gap-3 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 rounded-lg transition-all font-medium text-sm" href="#">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+                Settings
+            </a>
+</nav>
+<div class="mt-auto border-t border-slate-200 dark:border-slate-800 pt-4 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+                Support
+            </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-all font-medium text-sm rounded-lg" href="#">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+                Documentation
+            </a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-64 min-h-screen p-8 lg:p-12">
+<div class="max-w-6xl mx-auto space-y-8">
+<!-- 1. Profile Header -->
+<header class="relative overflow-hidden bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 shadow-sm flex flex-col md:flex-row items-center gap-8">
+<div class="relative group">
+<img alt="Alex Chen" class="w-32 h-32 rounded-xl object-cover ring-4 ring-surface-container-low" data-alt="Professional portrait of a man in his early 30s with a clean haircut and neutral expression, studio lighting, high resolution" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZWnwffh9Qt_DkL2r2CAyOy46clLmaKJ9VoDfC-PE-mUn_kCXaKTyuZTRysxxqnT66yJ9OcSulCMuLvGpY6M5DQ2It2cFS161ZpE6MQ1VZMTHcOiZnoje6dmD0EevWqvQs2pZrP7XzDmebOuHa9CJWS85_i0Vy7nL9QRi46lHJEigeNaSgApUZhhXZasJEjm5v4Kv956DyZcugJG-EFy4XkjA1M_PMQJ_IUR-M9XoAEQQHH5oUOQwpFUuW2nH0Kgzx92fRaf41IKJy">
+<button class="absolute -bottom-2 -right-2 bg-white shadow-lg p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+</button>
+</div>
+<div class="text-center md:text-left">
+<h2 class="font-headline text-3xl font-extrabold text-slate-900 tracking-tight">Alex Chen</h2>
+<p class="text-on-surface-variant font-medium mt-1">alex.chen@orchestra.enterprise</p>
+<div class="flex items-center justify-center md:justify-start gap-2 mt-4">
+<span class="bg-tertiary-container text-on-tertiary-container text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full">Member since Oct 2023</span>
+<span class="bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="verified">verified</span>
+                            Verified Professional
+                        </span>
+</div>
+</div>
+<div class="md:ml-auto flex flex-col items-end gap-2">
+<button class="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition-colors px-4 py-2 rounded-lg border border-slate-200 bg-white">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+                        Public Profile
+                    </button>
+</div>
+</header>
+<!-- 3-Column Detailed Panel Structure -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+<!-- 2. Personal Info Card (Left/Main Column) -->
+<div class="lg:col-span-7 space-y-8">
+<section class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline text-xl font-bold text-slate-900">Personal Information</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="person_edit">person_edit</span>
+</div>
+<div class="space-y-6">
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Full Name</label>
+<input class="w-full bg-surface-container-highest/30 border-none rounded-lg focus:ring-2 focus:ring-primary/50 py-3 px-4 text-slate-900 font-medium transition-all" type="text" value="Alex Chen">
+</div>
+<div class="space-y-2">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Avatar URL</label>
+<div class="flex gap-2">
+<input class="flex-1 bg-surface-container-highest/30 border-none rounded-lg focus:ring-2 focus:ring-primary/50 py-3 px-4 text-slate-900 font-medium transition-all font-mono text-xs" type="text" value="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d">
+<button class="bg-slate-100 hover:bg-slate-200 p-3 rounded-lg transition-colors">
+<span class="material-symbols-outlined" data-icon="link">link</span>
+</button>
+</div>
+</div>
+<div class="pt-6 flex items-center gap-4">
+<!-- Primary Purple (#49257E) requirement approximated via primary-dim/primary scale -->
+<button class="bg-[#49257E] text-white px-8 py-3 rounded-full font-bold text-sm tracking-wide shadow-lg shadow-[#49257E]/20 active:scale-95 transition-all">
+                                    Save Changes
+                                </button>
+<button class="text-slate-500 hover:text-slate-900 px-6 py-3 rounded-full font-bold text-sm tracking-wide transition-all active:scale-95">
+                                    Reset
+                                </button>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column (Connected Accounts & Workspace) -->
+<div class="lg:col-span-5 space-y-8">
+<!-- 3. Connected Accounts Card -->
+<section class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 shadow-sm">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline text-lg font-bold text-slate-900">Connected Accounts</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="hub">hub</span>
+</div>
+<div class="space-y-4">
+<!-- GitHub row -->
+<div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+<span class="material-symbols-outlined text-slate-900" data-icon="terminal">terminal</span>
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900">GitHub</p>
+<p class="text-xs text-on-surface-variant">@alexc_dev</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded">Connected</span>
+<button class="text-xs font-bold text-primary hover:underline">Reconnect</button>
+</div>
+</div>
+<!-- Google Auth row -->
+<div class="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+
+</div>
+<div>
+<p class="text-sm font-bold text-slate-900">Google Auth</p>
+<p class="text-xs text-on-surface-variant">Active</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-slate-300" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</section>
+<!-- 4. Workspace Summary Card -->
+<section class="bg-surface-container-lowest rounded-xl p-8 border border-outline-variant/10 shadow-sm relative overflow-hidden group">
+<!-- Decorative glow -->
+<div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors"></div>
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline text-lg font-bold text-slate-900">Workspace Summary</h3>
+<span class="material-symbols-outlined text-on-surface-variant" data-icon="corporate_fare">corporate_fare</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10">
+<p class="text-3xl font-headline font-extrabold text-[#49257E]">4</p>
+<p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mt-1">Projects Owned</p>
+</div>
+<div class="p-4 rounded-xl bg-surface-container-low border border-outline-variant/10">
+<p class="text-3xl font-headline font-extrabold text-[#49257E]">12</p>
+<p class="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant mt-1">Memberships</p>
+</div>
+</div>
+<div class="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/10">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-1" data-icon="info">info</span>
+<div>
+<p class="text-xs font-bold text-slate-900">Storage Usage</p>
+<div class="w-full h-1.5 bg-slate-200 rounded-full mt-2 overflow-hidden">
+<div class="h-full bg-[#49257E] w-[65%] rounded-full"></div>
+</div>
+<p class="text-[10px] text-on-surface-variant mt-1">6.5 GB of 10 GB used</p>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+<!-- Footer Meta -->
+<footer class="pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+<p class="text-xs text-on-surface-variant font-medium">© 2024 ORCHESTRA Enterprise. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="text-xs text-on-surface-variant hover:text-slate-900 font-bold uppercase tracking-widest" href="#">Privacy</a>
+<a class="text-xs text-on-surface-variant hover:text-slate-900 font-bold uppercase tracking-widest" href="#">Security</a>
+<a class="text-xs text-on-surface-variant hover:text-slate-900 font-bold uppercase tracking-widest" href="#">Logs</a>
+</div>
+</footer>
+</div>
+</main>
+
+
+
+
+</body></html>

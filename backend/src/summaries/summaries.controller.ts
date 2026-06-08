@@ -7,6 +7,11 @@ export class SummariesController {
 
     constructor(private summaries: SummariesService) { }
 
+    @Post(':meetingId/ai-summary')
+    aiSummary(@Param('meetingId') id: string) {
+        return this.summaries.summarizeTranscript(id);
+    }
+
     @Post(':meetingId')
     generate(@Param('meetingId') id: string, @Body('blockId') blockId: string) {
 

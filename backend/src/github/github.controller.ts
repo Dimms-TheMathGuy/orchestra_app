@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Req, Param, Headers, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Body, Req, Param, Headers, BadRequestException, UseGuards } from '@nestjs/common';
 import { GithubService } from './github.service';
 import type { Request } from 'express';
 import { linkTaskBranchSchema } from './dto/link-task-branch.dto';
@@ -63,6 +63,22 @@ export class GithubController {
   @Get('projects/:projectId/github-activity')
   getActivities(@Param('projectId') projectId: string) {
     return this.githubService.getActivities(projectId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':projectId/branches')
+  getBranches(@Param('projectId') projectId: string, @Req() req: any) {
+    return this.githubService.getProjectBranches(projectId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':projectId/task-branch-sync/:syncId')
+  unlinkTask(
+    @Param('projectId') projectId: string,
+    @Param('syncId') syncId: string,
+    @Req() req: any,
+  ) {
+    return this.githubService.unlinkTaskBranch(projectId, syncId, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

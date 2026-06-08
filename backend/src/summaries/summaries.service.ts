@@ -40,6 +40,18 @@ export class SummariesService {
         private notion: NotionService
     ) { };
 
+    async summarizeTranscript(meetingId: string) {
+        const transcripts = await this.transcripts.findByMeeting(String(meetingId));
+        if (!transcripts) {
+            return { error: 'Transcript not found' };
+        }
+        const fullText = Array.isArray(transcripts)
+            ? transcripts.map((t) => t.text).join('\n')
+            : transcripts.text;
+
+        return this.gemini.quickSummarize(fullText);
+    }
+
     async generate(meetingId: string, blockId: string) {
 
         const transcripts = await this.transcripts.findByMeeting(String(meetingId));

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
+import { Logo } from '@/app/components/Logo'
 
 export default function Register() {
   const [email, setEmail] = useState('')
@@ -22,7 +23,7 @@ export default function Register() {
     setLoading(true)
     try {
       await register(email, password, name)
-      toast.success('Account created! Redirecting to dashboard...')
+      toast.success('Account created! Redirecting...')
       router.push('/dashboard')
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Registration failed')
@@ -32,69 +33,80 @@ export default function Register() {
   }
 
   return (
-    <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-8 border border-border">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-center mb-2">Create Account</h1>
-        <p className="text-center text-muted-foreground">Join Orchestra today</p>
+    <div className="w-full max-w-[440px]">
+      <div className="glass-panel ethereal-shadow rounded-3xl border border-border p-8 sm:p-10">
+        <div className="flex flex-col items-center mb-8">
+          <Logo height={44} className="mb-5" />
+          <h1 className="text-2xl font-bold tracking-tight text-center">
+            Create your account
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1 text-center">
+            Join Orchestra and bring your team's workflow together.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <Label htmlFor="name" className="block mb-2 text-sm font-medium">
+              Full name
+            </Label>
+            <Input
+              id="name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="John Doe"
+              required
+              className="h-12 rounded-xl"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="email" className="block mb-2 text-sm font-medium">
+              Email address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@company.com"
+              required
+              className="h-12 rounded-xl"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="password" className="block mb-2 text-sm font-medium">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="h-12 rounded-xl"
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="brand-gradient h-12 w-full rounded-full text-base font-semibold text-white shadow-lg shadow-primary/20 transition-transform hover:scale-[1.01] active:scale-[0.99] border-0"
+          >
+            {loading ? 'Creating account...' : 'Create Account'}
+          </Button>
+        </form>
+
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          Already have an account?{' '}
+          <Link href="/" className="font-semibold text-primary hover:underline underline-offset-4">
+            Sign in
+          </Link>
+        </p>
       </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <Label htmlFor="name" className="block mb-2 text-foreground">
-            Full Name
-          </Label>
-          <Input
-            id="name"
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="John Doe"
-            required
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="email" className="block mb-2 text-foreground">
-            Email Address
-          </Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            required
-            className="w-full"
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="password" className="block mb-2 text-foreground">
-            Password
-          </Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            required
-            className="w-full"
-          />
-        </div>
-
-        <Button type="submit" disabled={loading} className="w-full">
-          {loading ? 'Creating Account...' : 'Register'}
-        </Button>
-      </form>
-
-      <p className="mt-6 text-center text-muted-foreground">
-        Already have an account?{' '}
-        <Link href="/" className="text-primary hover:underline font-medium">
-          Login
-        </Link>
-      </p>
     </div>
   )
 }

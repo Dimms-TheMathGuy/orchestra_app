@@ -67,6 +67,15 @@ export class ProjectsController {
     );
   }
 
+  @Patch(':projectId')
+  updateProject(
+    @Param('projectId') projectId: string,
+    @Body() body: { name?: string; description?: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.projectsService.updateProject(projectId, req.user.id, body);
+  }
+
   @Delete(':projectId')
   deleteProject(
     @Param('projectId') projectId: string,

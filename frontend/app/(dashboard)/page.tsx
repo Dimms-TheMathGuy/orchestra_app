@@ -1,142 +1,438 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Users, Calendar } from 'lucide-react'
-import { get } from '@/app/lib/api'
+import { useRouter } from 'next/navigation'
+import {
+  FolderKanban, Plus, Video, Loader2,
+  PieChart, MoreHorizontal, CheckSquare, BadgeCheck, AlertTriangle,
+} from 'lucide-react'
+import { get, post } from '@/app/lib/api'
 import { Button } from '@/app/components/ui/button'
 import { toast } from 'sonner'
+import { useAuth } from '@/app/context/AuthContext'
 
-interface Project {
+interface DashUser { id: string; name: string; email: string; avatarUrl?: string }
+interface DashMember { id?: string; name: string; email: string; avatarUrl?: string }
+interface DashProject {
   id: string
   name: string
   description: string | null
-  status?: 'ongoing' | 'completed'
-  owner: { name: string }
-  members?: { role: string; user: { name: string } }[]
-  createdAt: string
+  status: string
+  progress: number
+  isMember: boolean
+  role: string | null
+  leader?: DashUser
+  members: DashMember[]
+  lastActivity?: string
+}
+interface PerfPoint { month: string; performance: number }
+interface ContribPoint { name: string; value: number }
+interface DashboardData {
+  user: DashUser
+  performanceData: PerfPoint[]
+  contributionData: ContribPoint[]
+  projects: DashProject[]
+  tasks: { active: number; completed: number; inProgress: number }
+}
+interface ZoomMeeting {
+  id: string
+  topic: string
+  start_time?: string
+  isHost?: boolean
+}
+
+const DONUT_COLORS = ['#6d28d9', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe']
+
+function initialsOf(name?: string) {
+  return (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
+}
+
+function MemberAvatars({ members, max = 3 }: { members?: DashMember[]; max?: number }) {
+  if (!members?.length) return null
+  const shown = members.slice(0, max)
+  const extra = members.length - shown.length
+  return (
+    <div className="flex -space-x-2">
+      {shown.map((m, i) =>
+        m.avatarUrl ? (
+          <img key={i} src={m.avatarUrl} alt={m.name} title={m.name} className="h-8 w-8 rounded-full border-2 border-card object-cover" />
+        ) : (
+          <div key={i} title={m.name} className="brand-gradient flex h-8 w-8 items-center justify-center rounded-full border-2 border-card text-[10px] font-bold text-white">
+            {initialsOf(m.name)}
+          </div>
+        ),
+      )}
+      {extra > 0 && (
+        <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-card bg-muted text-[10px] font-bold text-muted-foreground">
+          +{extra}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState<Project[]>([])
+  const { user } = useAuth()
+  const router = useRouter()
+  const [data, setData] = useState<DashboardData | null>(null)
+  const [meetings, setMeetings] = useState<ZoomMeeting[]>([])
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'ongoing' | 'completed'>('ongoing')
 
   useEffect(() => {
-    fetchProjects()
-  }, [])
-
-  const fetchProjects = async () => {
-    try {
-      const data = await get('/projects')
-      setProjects(data)
-    } catch (error) {
-      toast.error('Failed to load projects')
-      console.error(error)
-    } finally {
-      setLoading(false)
+    if (!user?.id) return
+    const load = async () => {
+      try {
+        const [dash, zoom] = await Promise.all([
+          post('/dashboard', { userId: user.id }),
+          get('/zoom/meetings').catch(() => []),
+        ])
+        setData(dash)
+        setMeetings(Array.isArray(zoom) ? zoom : [])
+      } catch (error) {
+        toast.error('Failed to load dashboard')
+        console.error(error)
+      } finally {
+        setLoading(false)
+      }
     }
-  }
+    load()
+  }, [user?.id])
 
-  const ongoingProjects = projects.filter((p) => p.status !== 'completed')
-  const completedProjects = projects.filter((p) => p.status === 'completed')
+  const myProjects = useMemo(() => (data?.projects ?? []).filter((p) => p.isMember), [data])
+  const ongoing = myProjects.filter((p) => p.status !== 'completed')
+  const completed = myProjects.filter((p) => p.status === 'completed')
+  const visible = tab === 'ongoing' ? ongoing : completed
+
+  // Upcoming Zoom meetings (future first, then most recent)
+  const upcoming = useMemo(() => {
+    const now = Date.now()
+    const withTime = meetings.map((m) => ({ ...m, ts: m.start_time ? new Date(m.start_time).getTime() : 0 }))
+    const future = withTime.filter((m) => m.ts >= now).sort((a, b) => a.ts - b.ts)
+    const past = withTime.filter((m) => m.ts < now).sort((a, b) => b.ts - a.ts)
+    return [...future, ...past]
+  }, [meetings])
+
+  const nextMeeting = upcoming[0]
+
+  // Mini week calendar (current week, Mon–Sun), mark days that have meetings
+  const weekDays = useMemo(() => {
+    const today = new Date()
+    const day = (today.getDay() + 6) % 7 // Monday = 0
+    const monday = new Date(today)
+    monday.setDate(today.getDate() - day)
+    const meetingDays = new Set(
+      meetings
+        .filter((m) => m.start_time)
+        .map((m) => new Date(m.start_time as string).toDateString()),
+    )
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(monday)
+      d.setDate(monday.getDate() + i)
+      return {
+        date: d.getDate(),
+        label: ['M', 'T', 'W', 'T', 'F', 'S', 'S'][i],
+        isToday: d.toDateString() === today.toDateString(),
+        hasMeeting: meetingDays.has(d.toDateString()),
+      }
+    })
+  }, [meetings])
 
   if (loading) {
     return (
-      <div className="p-8 text-center">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground mt-4">Loading projects...</p>
+      <div className="flex h-full items-center justify-center p-8">
+        <div className="text-center">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+          <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
+        </div>
       </div>
     )
   }
 
+  const perf = data?.performanceData ?? []
+  const maxPerf = Math.max(1, ...perf.map((p) => p.performance))
+  const contrib = (data?.contributionData ?? []).filter((c) => c.value > 0)
+  const contribTotal = contrib.reduce((s, c) => s + c.value, 0) || 1
+  const topContribPct = contrib.length ? Math.round((Math.max(...contrib.map((c) => c.value)) / contribTotal) * 100) : 0
+
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">Manage your projects and collaborations</p>
-      </div>
+    <div className="mx-auto max-w-[1400px] p-6 lg:p-8">
+      <div className="grid grid-cols-12 gap-6 lg:gap-8">
+        {/* ── LEFT COLUMN ── */}
+        <div className="col-span-12 space-y-8 lg:col-span-8">
+          {/* Hero */}
+          <section className="brand-gradient relative overflow-hidden rounded-2xl p-8 text-white shadow-xl shadow-primary/20 lg:p-10">
+            <div className="relative z-10">
+              <span className="mb-3 inline-block rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider">
+                System Active
+              </span>
+              <h1 className="text-3xl font-extrabold leading-tight lg:text-4xl">
+                Hello {user?.name?.split(' ')[0] || 'there'}, welcome back 👋
+              </h1>
+              <p className="mt-2 max-w-md text-sm font-medium text-white/80">
+                You have {ongoing.length} ongoing {ongoing.length === 1 ? 'project' : 'projects'}.
+                Keep your team in sync — meetings, code, and notes in one place.
+              </p>
+              <Link href="/dashboard/add-project" className="mt-5 inline-block">
+                <Button className="gap-2 rounded-full bg-white px-5 font-semibold text-primary hover:bg-white/90 border-0">
+                  <Plus size={16} /> New Project
+                </Button>
+              </Link>
+            </div>
+            <div className="brand-blob right-[-10%] top-[-40%] h-64 w-64 bg-white/20" />
+            <div className="brand-blob bottom-[-60%] left-[20%] h-64 w-64 bg-black/10" />
+          </section>
 
-      {projects.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground mb-4">No projects yet</p>
-          <Link href="/dashboard/add-project">
-            <Button>Create Your First Project</Button>
-          </Link>
+          {/* Top row widgets */}
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            {/* Performance bars */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="text-sm font-bold">Your Performance</h3>
+                <MoreHorizontal size={18} className="text-muted-foreground/50" />
+              </div>
+              <div className="flex h-32 items-end gap-2 px-1">
+                {perf.map((p) => {
+                  const pct = Math.round((p.performance / maxPerf) * 100)
+                  const isPeak = p.performance === maxPerf
+                  return (
+                    <div key={p.month} className="group relative flex-1">
+                      <div
+                        className={`w-full rounded-t-lg transition-all ${isPeak ? 'brand-gradient' : 'bg-muted'}`}
+                        style={{ height: `${Math.max(8, pct)}%`, minHeight: 8 }}
+                      />
+                      <div className="absolute -top-7 left-1/2 -translate-x-1/2 rounded bg-foreground px-2 py-0.5 text-[10px] text-background opacity-0 transition-opacity group-hover:opacity-100">
+                        {p.performance}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-3 flex justify-between text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                {perf.map((p) => <span key={p.month}>{p.month}</span>)}
+              </div>
+            </div>
+
+            {/* Contribution donut */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="mb-6 flex items-center justify-between">
+                <h3 className="text-sm font-bold">Your Contribution</h3>
+                <PieChart size={18} className="text-muted-foreground/50" />
+              </div>
+              {contrib.length === 0 ? (
+                <div className="flex h-28 items-center justify-center text-center text-xs text-muted-foreground">
+                  Link Notion tasks to GitHub branches to see contribution.
+                </div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <div className="relative h-28 w-28 shrink-0">
+                    <svg className="h-full w-full -rotate-90" viewBox="0 0 36 36">
+                      <circle cx="18" cy="18" r="16" fill="none" stroke="var(--muted)" strokeWidth="4" />
+                      {(() => {
+                        let offset = 0
+                        return contrib.slice(0, 5).map((c, i) => {
+                          const frac = (c.value / contribTotal) * 100
+                          const el = (
+                            <circle
+                              key={c.name}
+                              cx="18" cy="18" r="16" fill="none"
+                              stroke={DONUT_COLORS[i % DONUT_COLORS.length]}
+                              strokeWidth="4"
+                              strokeDasharray={`${frac}, 100`}
+                              strokeDashoffset={-offset}
+                            />
+                          )
+                          offset += frac
+                          return el
+                        })
+                      })()}
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-xl font-black">{topContribPct}%</span>
+                    </div>
+                  </div>
+                  <div className="min-w-0 space-y-2">
+                    {contrib.slice(0, 4).map((c, i) => (
+                      <div key={c.name} className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground">
+                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                        <span className="truncate">{c.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Projects */}
+          <section>
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-xl font-extrabold tracking-tight">Projects</h2>
+              <div className="flex rounded-full border border-border bg-muted p-1">
+                <button onClick={() => setTab('ongoing')}
+                  className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${tab === 'ongoing' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
+                  On Going ({ongoing.length})
+                </button>
+                <button onClick={() => setTab('completed')}
+                  className={`rounded-full px-4 py-1.5 text-xs font-bold transition-all ${tab === 'completed' ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground'}`}>
+                  Completed ({completed.length})
+                </button>
+              </div>
+            </div>
+
+            {visible.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border bg-card/50 py-16 text-center">
+                <p className="mb-4 text-muted-foreground">
+                  {tab === 'ongoing' ? 'No ongoing projects yet' : 'No completed projects'}
+                </p>
+                {tab === 'ongoing' && (
+                  <Link href="/dashboard/add-project">
+                    <Button className="gap-2"><Plus size={16} /> Create your first project</Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                {visible.map((project) => (
+                  <Link key={project.id} href={`/workspace/${project.id}`}
+                    className="group rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                    <div className="mb-6 flex items-start justify-between">
+                      <div className="min-w-0">
+                        <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-primary">
+                          {project.role === 'owner' ? 'Owner' : project.role || 'Member'}
+                        </p>
+                        <h4 className="truncate text-lg font-bold">{project.name}</h4>
+                      </div>
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <FolderKanban size={18} />
+                      </div>
+                    </div>
+                    <div className="mb-6"><MemberAvatars members={project.members} /></div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-xs font-bold">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className={project.progress >= 70 ? 'text-primary' : 'text-foreground'}>
+                          {project.progress}%{project.progress >= 70 ? ' (almost done)' : ''}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div className={`h-full rounded-full ${project.progress >= 70 ? 'brand-gradient' : 'bg-primary/60'}`} style={{ width: `${project.progress}%` }} />
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
-      ) : (
-        <>
-          {ongoingProjects.length > 0 && (
-            <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-4">Ongoing Projects</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {ongoingProjects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/workspace/${project.id}`}
-                    className="bg-card border border-border rounded-lg shadow-sm p-6 hover:shadow-md transition-all hover:border-primary/50"
-                  >
-                    <h3 className="font-bold mb-2 line-clamp-1">{project.name}</h3>
-                    <p className="text-muted-foreground mb-4 line-clamp-2 text-sm">{project.description}</p>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Users size={16} className="text-primary" />
-                        <span>Owner: {project.owner?.name}</span>
-                      </div>
-                      {project.members && (
-                        <div className="flex items-center gap-2">
-                          <Users size={16} className="text-primary" />
-                          <span>{project.members.length} members</span>
-                        </div>
-                      )}
-                      {project.createdAt && (
-                        <div className="flex items-center gap-2">
-                          <Calendar size={16} className="text-primary" />
-                          <span>Created {new Date(project.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
+
+        {/* ── RIGHT COLUMN ── */}
+        <div className="col-span-12 space-y-6 lg:col-span-4">
+          {/* Next / live meeting */}
+          {nextMeeting ? (
+            <div className="rounded-2xl p-6 text-white shadow-xl" style={{ background: '#0047D1', boxShadow: '0 20px 40px -12px rgba(0,71,209,0.4)' }}>
+              <div className="mb-4 flex items-center justify-between">
+                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold">
+                  {nextMeeting.isHost ? 'YOU HOST' : 'UPCOMING'}
+                </span>
+                <Video size={20} />
               </div>
-            </section>
+              <h3 className="mb-1 text-lg font-bold">{nextMeeting.topic}</h3>
+              <p className="mb-6 text-xs text-white/80">
+                {nextMeeting.start_time ? new Date(nextMeeting.start_time).toLocaleString() : 'Scheduled meeting'}
+              </p>
+              <div className="flex items-center justify-end">
+                <button
+                  onClick={() => router.push(`/workspace/${myProjects[0]?.id || ''}/zoom/${nextMeeting.id}`)}
+                  disabled={!myProjects.length}
+                  className="rounded-full bg-white px-4 py-2 text-xs font-bold text-[#0047D1] transition-colors hover:bg-white/90 disabled:opacity-50"
+                >
+                  Join Call
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-6 text-center text-sm text-muted-foreground shadow-sm">
+              No upcoming meetings.
+            </div>
           )}
 
-          {completedProjects.length > 0 && (
-            <section>
-              <h2 className="text-2xl font-bold mb-4">Completed Projects</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {completedProjects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/workspace/${project.id}`}
-                    className="bg-card border border-border rounded-lg shadow-sm p-6 hover:shadow-md transition-all opacity-75 hover:opacity-100"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-bold line-clamp-1">{project.name}</h3>
-                      <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-xs px-2 py-1 rounded">
-                        Completed
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground mb-4 line-clamp-2 text-sm">{project.description}</p>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Users size={16} className="text-primary" />
-                        <span>Owner: {project.owner?.name}</span>
-                      </div>
-                      {project.members && (
-                        <div className="flex items-center gap-2">
-                          <Users size={16} className="text-primary" />
-                          <span>{project.members.length} members</span>
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-        </>
-      )}
+          {/* Upcoming Meet calendar */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-widest">Upcoming Meet</h3>
+            </div>
+            <div className="mb-4 grid grid-cols-7 gap-1 text-center">
+              {weekDays.map((d, i) => (
+                <span key={`l${i}`} className="text-[9px] font-bold text-muted-foreground">{d.label}</span>
+              ))}
+              {weekDays.map((d, i) => (
+                <div key={`d${i}`} className="relative py-2">
+                  <span className={`mx-auto flex h-7 w-7 items-center justify-center rounded-lg text-xs ${d.isToday ? 'brand-gradient font-bold text-white' : 'text-foreground'}`}>
+                    {d.date}
+                  </span>
+                  {d.hasMeeting && !d.isToday && (
+                    <span className="absolute bottom-0 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary" />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="space-y-3">
+              {upcoming.slice(0, 3).map((m) => (
+                <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                  <div className="h-8 w-1 rounded-full bg-primary" />
+                  <div className="min-w-0">
+                    <p className="truncate text-[11px] font-bold">{m.topic}</p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {m.start_time ? new Date(m.start_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {upcoming.length === 0 && <p className="text-xs text-muted-foreground">No meetings scheduled.</p>}
+            </div>
+          </div>
+
+          {/* Task summary */}
+          <div className="space-y-4">
+            <TaskCard icon={CheckSquare} label="Active Tasks" value={data?.tasks.active ?? 0} suffix="Tasks" tone="muted" />
+            <TaskCard icon={BadgeCheck} label="Completed Tasks" value={data?.tasks.completed ?? 0} suffix="Items" tone="card" />
+            <TaskCard icon={AlertTriangle} label="In Progress / Review" value={data?.tasks.inProgress ?? 0} suffix="Active" tone="alert" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TaskCard({
+  icon: Icon, label, value, suffix, tone,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  label: string
+  value: number
+  suffix: string
+  tone: 'muted' | 'card' | 'alert'
+}) {
+  const styles =
+    tone === 'alert'
+      ? 'border-red-100 bg-red-50'
+      : tone === 'muted'
+        ? 'border-border bg-muted/50'
+        : 'border-border bg-card shadow-sm'
+  const valueColor = tone === 'alert' ? 'text-red-600' : 'text-foreground'
+  const labelColor = tone === 'alert' ? 'text-red-500/70' : 'text-muted-foreground'
+  const iconColor = tone === 'alert' ? 'text-red-500' : 'text-muted-foreground'
+  return (
+    <div className={`rounded-xl border p-5 ${styles}`}>
+      <div className="flex items-start justify-between">
+        <div>
+          <p className={`mb-1 text-xs font-bold ${labelColor}`}>{label}</p>
+          <h4 className={`text-2xl font-black ${valueColor}`}>{value} <span className="text-base font-bold">{suffix}</span></h4>
+        </div>
+        <Icon size={22} className={iconColor} />
+      </div>
     </div>
   )
 }

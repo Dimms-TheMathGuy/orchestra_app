@@ -26,6 +26,7 @@ model User {
   projectsOwned       Project[]            @relation("ProjectOwner")
   memberships         ProjectMember[]
   messages            ProjectMessage[]
+  roleRequests        RoleRequest[]
 }
 
 model Project {
@@ -46,16 +47,23 @@ model Project {
   messages        ProjectMessage[]
   repositories    ProjectRepository[]
   taskBranchSyncs TaskBranchSync[]
+  roles           ProjectRole[]
+  roleRequests    RoleRequest[]
+  channels        ChatChannel[]
+  projectMeetings ProjectMeeting[]
+  notionTasks     NotionTask[]
 }
 
 model ProjectMember {
-  id        String   @id @default(uuid())
-  userId    String
-  projectId String
-  role      String
-  joinedAt  DateTime @default(now())
-  project   Project  @relation(fields: [projectId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
+  id            String       @id @default(uuid())
+  userId        String
+  projectId     String
+  role          String       // "OWNER" | "MEMBER" — for permissions
+  projectRoleId String?      // FK → ProjectRole (org hierarchy)
+  joinedAt      DateTime     @default(now())
+  project       Project      @relation(fields: [projectId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
+  projectRole   ProjectRole? @relation(fields: [projectRoleId], references: [id], onDelete: SetNull)
 
   @@unique([userId, projectId])
 }
@@ -143,6 +151,25 @@ model TaskBranchSync {
   @@unique([repoId, branchName])
 }
 
+/// Cached snapshot of tasks pulled from a project's Notion task database.
+/// Refreshed on demand via POST /projects/:id/notion/sync-tasks.
+model NotionTask {
+  id               String   @id @default(uuid())
+  projectId        String
+  notionPageId     String   @unique
+  notionDatabaseId String
+  title            String
+  status           String? // raw status/select name from Notion
+  statusGroup      String   @default("todo") // normalized: todo | in_progress | done
+  assigneeEmails   String[] // emails of assignees (when Notion exposes them)
+  assigneeNames    String[] // display names of assignees (fallback match)
+  url              String?
+  lastSyncedAt     DateTime @default(now())
+  project          Project  @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+}
+
 model Passkey {
   id           String   @id @default(cuid())
   userId       String
@@ -175,6 +202,7 @@ model PasswordResetToken {
 model ProjectMessage {
   id          String              @id @default(uuid())
   projectId   String
+  channelId   String?
   senderId    String
   content     String
   iv          String
@@ -186,6 +214,7 @@ model ProjectMessage {
   attachments MessageAttachment[]
   reads       MessageRead[]
   project     Project             @relation(fields: [projectId], references: [id])
+  channel     ChatChannel?        @relation(fields: [channelId], references: [id])
   replyTo     ProjectMessage?     @relation("MessageReplies", fields: [replyToId], references: [id])
   replies     ProjectMessage[]    @relation("MessageReplies")
   sender      User                @relation(fields: [senderId], references: [id])
@@ -210,6 +239,75 @@ model MessageAttachment {
   fileName  String
   createdAt DateTime       @default(now())
   message   ProjectMessage @relation(fields: [messageId], references: [id])
+}
+
+model ProjectRole {
+  id          String          @id @default(uuid())
+  projectId   String
+  name        String
+  displayName String
+  level       Int             // 0=PM, 1=board, 2=lead, 3=member
+  isLead      Boolean         @default(false)
+  color       String          @default("#64748b")
+  createdAt   DateTime        @default(now())
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  members     ProjectMember[]
+  requests    RoleRequest[]
+
+  @@unique([projectId, name])
+}
+
+model RoleRequest {
+  id          String            @id @default(uuid())
+  userId      String
+  projectId   String
+  roleId      String
+  status      RoleRequestStatus @default(PENDING)
+  message     String?
+  createdAt   DateTime          @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  user        User              @relation(fields: [userId], references: [id])
+  project     Project           @relation(fields: [projectId], references: [id])
+  role        ProjectRole       @relation(fields: [roleId], references: [id])
+}
+
+model ChatChannel {
+  id        String           @id @default(uuid())
+  projectId String
+  name      String
+  type      ChannelType
+  team      String? // for TEAM channels: "frontend", "backend", etc.
+  createdAt DateTime         @default(now())
+  project   Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  messages  ProjectMessage[]
+
+  @@unique([projectId, type, team])
+}
+
+model ProjectMeeting {
+  id            String   @id @default(uuid())
+  projectId     String
+  zoomMeetingId String   @unique
+  topic         String
+  hostUserId    String
+  organizerTeam String? // team that owns this meeting; null = project-wide
+  allowedTeams  String[] // extra teams invited besides management + organizer
+  startTime     DateTime?
+  createdAt     DateTime @default(now())
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+enum ChannelType {
+  GENERAL
+  MANAGEMENT
+  TEAM
+}
+
+enum RoleRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum SyncState {

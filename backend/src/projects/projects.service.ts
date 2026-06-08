@@ -5,11 +5,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { RolesService } from '../roles/roles.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 
 @Injectable()
 export class ProjectsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rolesService: RolesService,
+  ) {}
 
   async createProject(userId: string, dto: CreateProjectDto) {
     const description = dto.description?.trim();
@@ -49,6 +53,9 @@ export class ProjectsService {
       return createdProject;
     });
 
+    // Seed default roles + assign PM role to owner (outside main transaction)
+    await this.rolesService.seedProjectRoles(project.id, userId);
+
     return this.findProjectById(project.id, userId);
   }
 
@@ -84,6 +91,7 @@ export class ProjectsService {
                 avatarUrl: true,
               },
             },
+            projectRole: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -128,6 +136,7 @@ export class ProjectsService {
                 avatarUrl: true,
               },
             },
+            projectRole: true,
           },
           orderBy: {
             joinedAt: 'asc',
@@ -196,6 +205,39 @@ export class ProjectsService {
         status,
       },
     });
+  }
+
+  async updateProject(
+    projectId: string,
+    userId: string,
+    data: { name?: string; description?: string },
+  ) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project) {
+      throw new NotFoundException('Project not found');
+    }
+
+    if (project.ownerId !== userId) {
+      throw new ForbiddenException('Only the owner can edit this project');
+    }
+
+    const updateData: { name?: string; description?: string | null } = {};
+    if (typeof data.name === 'string' && data.name.trim()) {
+      updateData.name = data.name.trim();
+    }
+    if (typeof data.description === 'string') {
+      updateData.description = data.description.trim() || null;
+    }
+
+    await this.prisma.project.update({
+      where: { id: projectId },
+      data: updateData,
+    });
+
+    return this.findProjectById(projectId, userId);
   }
 
   async deleteProject(
@@ -289,6 +331,7 @@ export class ProjectsService {
       members: project.members.map((member: any) => ({
         id: member.id,
         role: member.role,
+        projectRole: member.projectRole ?? null,
         joinedAt: member.joinedAt,
         user: member.user,
       })),

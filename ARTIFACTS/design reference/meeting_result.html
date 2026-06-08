@@ -1,0 +1,455 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>ORCHESTRA | Meeting Result Review</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#d1d4dd",
+                        "secondary-fixed": "#d7e3f8",
+                        "secondary-dim": "#455061",
+                        "primary-container": "#7c9cff",
+                        "surface-container": "#e6e8ef",
+                        "error-container": "#fb5151",
+                        "surface-bright": "#f5f6fc",
+                        "primary-fixed": "#7c9cff",
+                        "on-tertiary-container": "#4e525a",
+                        "surface-container-highest": "#dadde5",
+                        "inverse-on-surface": "#9b9da2",
+                        "on-tertiary-fixed": "#3c3f47",
+                        "secondary-fixed-dim": "#c9d5e9",
+                        "on-secondary-fixed": "#344050",
+                        "surface-tint": "#1f52c9",
+                        "inverse-surface": "#0b0e12",
+                        "tertiary-container": "#e0e2ec",
+                        "on-error-container": "#570008",
+                        "secondary": "#505c6d",
+                        "primary-fixed-dim": "#678dff",
+                        "on-surface": "#2c2f33",
+                        "on-secondary-fixed-variant": "#505c6d",
+                        "tertiary-fixed-dim": "#d2d4de",
+                        "tertiary-dim": "#4c5058",
+                        "surface-container-low": "#eff0f7",
+                        "on-tertiary-fixed-variant": "#585b64",
+                        "on-primary-fixed-variant": "#002570",
+                        "tertiary-fixed": "#e0e2ec",
+                        "inverse-primary": "#638aff",
+                        "on-background": "#2c2f33",
+                        "surface-variant": "#dadde5",
+                        "surface": "#f5f6fc",
+                        "on-primary-fixed": "#000000",
+                        "on-primary-container": "#001d5c",
+                        "primary-dim": "#0245bd",
+                        "error-dim": "#9f0519",
+                        "secondary-container": "#d7e3f8",
+                        "outline-variant": "#abadb3",
+                        "primary": "#1f52c9",
+                        "on-secondary-container": "#475363",
+                        "outline": "#74777c",
+                        "on-primary": "#f1f2ff",
+                        "on-tertiary": "#f0f2fc",
+                        "on-error": "#ffefee",
+                        "surface-container-high": "#e0e2ea",
+                        "background": "#f5f6fc",
+                        "on-surface-variant": "#595b61",
+                        "on-secondary": "#edf3ff",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary": "#585b64",
+                        "error": "#b31b25"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["Manrope"],
+                        "body": ["Inter"],
+                        "label": ["Inter"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        .tonal-layering-no-borders {
+            border: none !important;
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- Global Layout Container -->
+<div class="flex h-screen overflow-hidden">
+<!-- Left Sidebar (Shared Component: SideNavBar) -->
+<aside class="fixed left-0 top-0 h-full flex flex-col w-64 border-r border-slate-200/50 dark:border-slate-800/50 bg-slate-50 dark:bg-slate-900 font-['Manrope'] text-sm tracking-tight z-50">
+<div class="p-6 flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkW_FIAFN5v0HBWybPbFCXUdCB1jaMJ_YCcEYMfpSkBADKuLg5Y-d17BSLVlzAxvEieTb3J4Ja4jWjVl7JHjJEiizkIvAgC8Ygzg55gVyZMueKnipyIe3at46stXPORE5Ci1mLAvJti1wnDj8-DigpjE4jPY6JHs3HLGQN-8T41NdI07bN78lbA5qLySvzYC89KdQV9GDxe3faKvnBTP6gNd1UxIKfex4sj3ZWxqCEoHKW6fsdZAntXw-1SEk4H4oCJjkot_TbX_Kd" class="w-full h-full object-contain rounded-lg" alt="ORCHESTRA Logo"></div>
+<div>
+<h1 class="text-xl font-bold tracking-tighter text-slate-900 dark:text-white uppercase">ORCHESTRA</h1>
+<p class="text-[10px] uppercase tracking-widest text-on-surface-variant opacity-60">Project Sync</p>
+</div>
+</div>
+<div class="px-4 mb-6">
+<button class="w-full py-2.5 px-4 bg-primary text-on-primary rounded-lg font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all active:scale-95">
+<span class="material-symbols-outlined text-sm">add</span>
+                New Session
+            </button>
+</div>
+<nav class="flex-1 px-3 space-y-1 overflow-y-auto">
+<div class="flex flex-col">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+                    Dashboard
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="folder_shared">folder_shared</span>
+                    Projects
+                </a>
+<a class="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 font-semibold rounded-lg flex items-center gap-3 px-3 py-2 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+                    Sessions
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="sync_alt">sync_alt</span>
+                    Integrations
+                </a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+                    Settings
+                </a>
+</div>
+<div class="mt-8 pt-4 border-t border-slate-200/50">
+<p class="px-3 text-[10px] uppercase font-bold text-on-surface-variant opacity-50 mb-2">History</p>
+<div class="space-y-4">
+<div>
+<span class="px-3 text-xs font-semibold text-on-surface-variant">Today</span>
+<div class="mt-1 space-y-1">
+<div class="px-3 py-2 bg-surface-container-lowest border-l-2 border-primary text-primary text-xs font-medium cursor-pointer">UI Design Meeting...</div>
+<div class="px-3 py-2 text-on-surface-variant text-xs hover:bg-surface-container transition-colors cursor-pointer">API Integration Sync</div>
+</div>
+</div>
+<div>
+<span class="px-3 text-xs font-semibold text-on-surface-variant">Yesterday</span>
+<div class="mt-1 space-y-1">
+<div class="px-3 py-2 text-on-surface-variant text-xs hover:bg-surface-container transition-colors cursor-pointer">Product Roadmap Q3</div>
+<div class="px-3 py-2 text-on-surface-variant text-xs hover:bg-surface-container transition-colors cursor-pointer">Client Onboarding</div>
+</div>
+</div>
+</div>
+</div>
+</nav>
+</aside>
+<!-- Top Navigation (Shared Component: TopNavBar) -->
+<header class="fixed top-0 right-0 left-64 z-40 flex justify-between items-center px-8 h-16 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-100 dark:border-slate-900 shadow-sm dark:shadow-none font-['Inter'] text-sm font-medium">
+<div class="flex items-center gap-6">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+<input class="pl-10 pr-4 py-1.5 bg-surface-container-low border-none rounded-md w-64 focus:ring-1 focus:ring-primary/50 text-sm" placeholder="Search sessions..." type="text">
+</div>
+<div class="flex items-center gap-6">
+<a class="text-slate-500 hover:text-indigo-500 transition-all" href="#">Drafts</a>
+<a class="text-slate-500 hover:text-indigo-500 transition-all" href="#">Sync Status</a>
+<a class="text-slate-500 hover:text-indigo-500 transition-all" href="#">Team</a>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<button class="bg-primary text-on-primary px-4 py-2 rounded-full text-xs font-bold hover:opacity-90 transition-all">
+                Share Workspace
+            </button>
+<div class="flex items-center gap-2 text-on-surface-variant">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">notifications</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-colors">help_outline</span>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden"><img src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkW_FIAFN5v0HBWybPbFCXUdCB1jaMJ_YCcEYMfpSkBADKuLg5Y-d17BSLVlzAxvEieTb3J4Ja4jWjVl7JHjJEiizkIvAgC8Ygzg55gVyZMueKnipyIe3at46stXPORE5Ci1mLAvJti1wnDj8-DigpjE4jPY6JHs3HLGQN-8T41NdI07bN78lbA5qLySvzYC89KdQV9GDxe3faKvnBTP6gNd1UxIKfex4sj3ZWxqCEoHKW6fsdZAntXw-1SEk4H4oCJjkot_TbX_Kd" class="w-full h-full object-contain" alt="ORCHESTRA Logo"></div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="ml-64 mt-16 flex flex-1 overflow-hidden bg-surface-container-low">
+<!-- Center Panel: Review Workspace -->
+<section class="flex-1 overflow-y-auto px-10 py-8 scroll-smooth">
+<header class="mb-8">
+<nav class="flex items-center gap-2 text-[10px] text-on-surface-variant uppercase tracking-widest mb-2">
+<span class="">Sessions</span>
+<span class="material-symbols-outlined text-[10px]">chevron_right</span>
+<span class="">Design Review</span>
+</nav>
+<h2 class="text-3xl font-extrabold font-headline text-on-surface tracking-tight">UI Design Meeting - Project A Refactor</h2>
+</header>
+<div class="space-y-12 max-w-4xl">
+<!-- Narrative Section -->
+<div class="space-y-6">
+<!-- Summary Section -->
+<div class="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-4">
+<span class="material-symbols-outlined text-primary">auto_awesome</span>
+<h3 class="text-xs font-bold uppercase tracking-wider text-on-surface">AI Summary</h3>
+</div>
+<p class="text-on-surface-variant leading-relaxed text-sm">
+                            The team convened to address the structural refactor of Project A's dashboard. Core focus was on shifting from container-heavy borders to tonal layering, aligning with the new "Ethereal Architect" philosophy. Key bottlenecks identified were the legacy navigation components and inconsistent padding across nested cards. The decision was made to prioritize the 'Notion Sync' module by EOD Friday.
+                        </p>
+</div>
+<!-- Key Decisions -->
+<div class="bg-surface-container-lowest p-8 rounded-xl shadow-sm border border-outline-variant/10">
+<div class="flex items-center gap-2 mb-5">
+<span class="material-symbols-outlined text-primary">gavel</span>
+<h3 class="text-xs font-bold uppercase tracking-wider text-on-surface">Key Decisions</h3>
+</div>
+<ul class="space-y-4">
+<li class="flex items-start gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                                Adopt the 24px/12px nested radius standard across all future templates.
+                            </li>
+<li class="flex items-start gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                                Suppress bottom navigation bars on all focused transactional workflows.
+                            </li>
+<li class="flex items-start gap-3 text-sm text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-sm mt-0.5">check_circle</span>
+                                Shift all secondary actions to outlined icon variants to reduce visual noise.
+                            </li>
+</ul>
+</div>
+</div>
+<!-- Notion Draft Modules Section (Tonal Shift) -->
+<div class="pt-6">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xs font-extrabold uppercase tracking-widest text-on-surface-variant opacity-80 flex items-center gap-2">
+<span class="material-symbols-outlined text-base">database</span>
+                            Structured Notion Drafts
+                        </h3>
+<span class="text-[10px] text-on-surface-variant font-medium">2 Items Pending</span>
+</div>
+<div class="space-y-6">
+<!-- Draft Card 1: Task -->
+<div class="bg-[#F8F9FE] border border-primary/10 rounded-xl overflow-hidden shadow-sm transition-all hover:border-primary/30">
+<!-- Card Header -->
+<div class="px-5 py-3 border-b border-outline-variant/10 bg-white flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-on-surface text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-base">task</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Notion Template</p>
+<h4 class="text-xs font-bold text-on-surface">Task Item</h4>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-full text-[10px] font-bold border border-green-200/50">Ready to Sync</span>
+<div class="h-4 w-px bg-outline-variant/20"></div>
+<div class="flex items-center gap-1">
+<label class="relative inline-flex items-center cursor-pointer scale-75">
+<input checked="" class="sr-only peer" type="checkbox">
+<div class="w-9 h-5 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
+</label>
+<span class="text-[10px] font-bold text-primary">Sync</span>
+</div>
+</div>
+</div>
+<!-- Card Properties -->
+<div class="p-5 space-y-4">
+<div class="grid grid-cols-12 gap-6">
+<div class="col-span-8">
+<label class="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wide">Title</label>
+<input class="w-full bg-white border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium" type="text" value="Implement Tonal Layering CSS Variables">
+</div>
+<div class="col-span-4">
+<label class="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wide">Priority</label>
+<div class="relative">
+<select class="w-full appearance-none bg-white border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium pr-10">
+<option class="text-error font-bold">P1 - Critical</option>
+<option>P2 - High</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant text-base">expand_more</span>
+</div>
+</div>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wide">Assignee</label>
+<div class="flex items-center gap-2 p-2 bg-white border border-outline-variant/20 rounded-lg w-fit">
+<img class="w-6 h-6 rounded-full ring-1 ring-outline-variant/10" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC09yrNjeKVklMFywzdKeIUF3De2Sk__YButaktTqD-vDKyMCPBsbUssZ3ta73k5U2oaN7urUDtpNFYfPinJh27MI1_hkZAC1ji02VPRsuW6ry-LlPwktcdqdIt1C_tDEBpPEYOnzPmVmIpjU4_VwpW65btsQ2JwQHjxfpVxodEnz0aJEhpTdIkveV8m_NXBbFBluA6ucrrtlb2823xXUvIBzOxtvrqrFIFwokqNwa5eyAN16Yf4RE4lvGLpLdZQTj0ndP8cW0Q8SBf">
+<span class="text-xs font-semibold px-2">Ina Kusuma</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors pr-1">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Metadata Footer -->
+<div class="px-5 py-3 bg-surface-container-low border-t border-outline-variant/10 flex items-center justify-between">
+<div class="flex items-center gap-2 opacity-60">
+<span class="material-symbols-outlined text-xs">link</span>
+<span class="text-[10px] font-medium tracking-tight">Targets: <span class="font-bold">Project A &gt; Engineer Backlog</span></span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[10px] font-bold">
+<span class="material-symbols-outlined text-base">edit_note</span>
+                                        Edit Fields
+                                    </button>
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-error transition-colors text-[10px] font-bold">
+<span class="material-symbols-outlined text-base">delete</span>
+                                        Remove
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Draft Card 2: Decision -->
+<div class="bg-[#F8F9FE] border border-outline-variant/10 rounded-xl overflow-hidden shadow-sm transition-all hover:border-primary/30 opacity-90">
+<!-- Card Header -->
+<div class="px-5 py-3 border-b border-outline-variant/10 bg-white flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-on-surface text-surface flex items-center justify-center">
+<span class="material-symbols-outlined text-base">lightbulb</span>
+</div>
+<div>
+<p class="text-[10px] font-bold text-on-surface-variant uppercase tracking-tighter">Notion Template</p>
+<h4 class="text-xs font-bold text-on-surface">Decision Log</h4>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-full text-[10px] font-bold border border-amber-200/50">Needs Review</span>
+<div class="h-4 w-px bg-outline-variant/20"></div>
+<div class="flex items-center gap-1 opacity-50 cursor-not-allowed">
+<label class="relative inline-flex items-center scale-75 cursor-not-allowed">
+<input class="sr-only peer" disabled="" type="checkbox">
+<div class="w-9 h-5 bg-surface-container-highest rounded-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 transition-all"></div>
+</label>
+<span class="text-[10px] font-bold">Sync</span>
+</div>
+</div>
+</div>
+<!-- Card Properties -->
+<div class="p-5 space-y-4">
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wide">Decision Summary</label>
+<textarea class="w-full bg-white border border-outline-variant/20 rounded-lg text-sm px-4 py-2.5 focus:ring-1 focus:ring-primary/40 focus:border-primary/40 transition-all font-medium resize-none h-20">Deprecate all sharp corners for 12px/24px radii standards across all responsive breakpoints.</textarea>
+</div>
+<div>
+<label class="block text-[10px] font-bold text-on-surface-variant mb-1.5 uppercase tracking-wide">Impact Level</label>
+<div class="flex gap-2">
+<span class="px-3 py-1 bg-indigo-50 text-indigo-700 text-[10px] font-bold rounded-full border border-indigo-100 uppercase">System-wide</span>
+<span class="px-3 py-1 bg-slate-50 text-slate-600 text-[10px] font-bold rounded-full border border-slate-200 uppercase">Design System</span>
+</div>
+</div>
+</div>
+<!-- Metadata Footer -->
+<div class="px-5 py-3 bg-surface-container-low border-t border-outline-variant/10 flex items-center justify-between">
+<div class="flex items-center gap-2 opacity-60">
+<span class="material-symbols-outlined text-xs">link</span>
+<span class="text-[10px] font-medium tracking-tight">Targets: <span class="font-bold">Global Design System &gt; Log</span></span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-primary transition-colors text-[10px] font-bold">
+<span class="material-symbols-outlined text-base">edit_note</span>
+                                        Edit Fields
+                                    </button>
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-error transition-colors text-[10px] font-bold">
+<span class="material-symbols-outlined text-base">delete</span>
+                                        Remove
+                                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Primary CTA -->
+<div class="pt-8 pb-12">
+<button class="w-full py-5 bg-[#49257E] text-white rounded-xl font-headline font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+<span class="material-symbols-outlined">sync</span>
+                        Commit and Sync to Notion
+                    </button>
+</div>
+</div>
+</section>
+<!-- Right Sidebar: Transcript (Shared Component) -->
+<section class="w-96 bg-white border-l border-outline-variant/10 overflow-y-auto flex flex-col">
+<div class="p-6 border-b border-outline-variant/10 flex items-center justify-between bg-white sticky top-0 z-10">
+<h3 class="font-headline font-bold text-on-surface">Transcript</h3>
+<button class="text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+<div class="p-6 space-y-8">
+<!-- Message 1 -->
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCP9JI9zzLbYdBae8XBG2qVquxc6iGUrtpEZu6pXnU3e5WB4ou7I9QxcTKgWVFXbDDixsvr3PasAvtOtmuhqtMOd3ZsgwBJW9SAfxDf8hh0PymefcrP53r0-dqmW5kS1UCC6PmCvnIrrbg30JTWT3F2BqSYbDMTVY8UH6W3qIfvh6FkwV3ddqEuqnf1-OXo34ZBwgrQxPrpkvcO-PoRMa_e5G_N6i8wZZz1jzImHicfaMNmtMhrb9GOxCjdo_Nx01frMi0XgXs3im2Q">
+<div>
+<h4 class="text-xs font-bold font-headline text-on-surface">Ina Kusuma</h4>
+<span class="text-[10px] text-on-surface-variant">10:04 AM</span>
+</div>
+</div>
+<div class="pl-11">
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                            I think we really need to push the "Ethereal" aspect further. The current containers are still too visible. Can we try decreasing the border opacity to 10%?
+                        </p>
+</div>
+</div>
+<!-- Message 2 -->
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-[10px]">ML</div>
+<div>
+<h4 class="text-xs font-bold font-headline text-on-surface">Marcus Low</h4>
+<span class="text-[10px] text-on-surface-variant">10:06 AM</span>
+</div>
+</div>
+<div class="pl-11">
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                            Agreed. Let's shift the focus to the inner-glow effect. Tonal layering will give us that premium depth we're looking for without needing hard lines.
+                        </p>
+</div>
+</div>
+<div class="border-t border-outline-variant/10 w-1/2 mx-auto"></div>
+<!-- Message 3 -->
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<img class="w-8 h-8 rounded-full border border-primary/20" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeRbh6mZXYPIcYmOvkLGt8E7ySz4yCMgbKZlfFGaympi2i_d2ouCtbjN8pfPRKpl-fIRnpJRLG2uAMv-CXIoC6G-8vIbuZ9bOBeE4H_ReFbtZmrqR9kWuD2volL6hNb2tcS4_njmEEk26t9geLDo7-ObSFFUiZdvhsCeLv1M0quk4-bEYby5r1MEz0n94pMkaIjTZAmP6DwwZiXcmae14PZc_Nr1QdenRGdEtHD6ZdRnqgEujLtay1pVj94txcIFcpRJMh7pQBJzeO">
+<div>
+<h4 class="text-xs font-bold font-headline text-on-surface">Ina Kusuma</h4>
+<span class="text-[10px] text-on-surface-variant">10:12 AM</span>
+</div>
+</div>
+<div class="pl-11">
+<p class="text-sm text-on-surface-variant leading-relaxed">
+                            Exactly. I'll take the task for the CSS variables refactor. Let's aim to have a prototype ready by Friday sync.
+                        </p>
+</div>
+</div>
+<!-- Message 4 -->
+<div class="space-y-2">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 font-bold text-[10px]">JD</div>
+<div>
+<h4 class="text-xs font-bold font-headline text-on-surface">Jane Doe</h4>
+<span class="text-[10px] text-on-surface-variant">10:15 AM</span>
+</div>
+</div>
+<div class="pl-11">
+<p class="text-sm text-on-surface-variant leading-relaxed italic">
+                            [Drafting Notion Task...]
+                        </p>
+</div>
+</div>
+</div>
+<div class="mt-auto p-6 bg-surface-container-low border-t border-outline-variant/10">
+<div class="relative">
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-lowest border border-outline-variant/20 rounded-lg text-sm focus:ring-1 focus:ring-primary/40" placeholder="Search transcript..." type="text">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-lg">search</span>
+</div>
+</div>
+</section>
+</main>
+</div>
+
+
+</body></html>

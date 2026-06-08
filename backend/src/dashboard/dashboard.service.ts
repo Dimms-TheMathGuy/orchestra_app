@@ -22,6 +22,9 @@ export class DashboardService {
     }
 
     const projectsRaw = await this.prisma.project.findMany({
+      where: {
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
       include: {
         owner: {
           select: {
@@ -122,16 +125,31 @@ export class DashboardService {
       );
     }, 0);
 
-    const activeTasks = projectsRaw.reduce((total, project) => {
-      return (
-        total +
-        project.taskBranchSyncs.filter(
-          (task) =>
-            task.syncState === SyncState.IN_PROGRESS ||
-            task.syncState === SyncState.IN_REVIEW,
-        ).length
-      );
-    }, 0);
+    // Task cards reflect the user's real Notion tasks (assignee = this user),
+    // pulled from the cached NotionTask snapshot. Match on email first, name as
+    // fallback (Notion only exposes assignee email when the integration can read it).
+    const myNotionTasks = await this.prisma.notionTask.findMany({
+      where: {
+        project: {
+          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        },
+        OR: [
+          { assigneeEmails: { has: user.email } },
+          { assigneeNames: { has: user.name } },
+        ],
+      },
+      select: { statusGroup: true },
+    });
+
+    const completedNotionTasks = myNotionTasks.filter(
+      (t) => t.statusGroup === 'done',
+    ).length;
+    const inProgressNotionTasks = myNotionTasks.filter(
+      (t) => t.statusGroup === 'in_progress',
+    ).length;
+    const activeNotionTasks = myNotionTasks.filter(
+      (t) => t.statusGroup !== 'done',
+    ).length;
 
     const meetingSchedule = projectsRaw.flatMap((project) =>
       project.meetings.map((meeting) => ({
@@ -182,9 +200,9 @@ export class DashboardService {
       ongoingMeeting,
       meetingSchedule,
       tasks: {
-        plannedToday: totalTasks,
-        finishedYesterday: doneTasks,
-        dueThisWeek: activeTasks,
+        active: activeNotionTasks,
+        completed: completedNotionTasks,
+        inProgress: inProgressNotionTasks,
       },
     };
   }

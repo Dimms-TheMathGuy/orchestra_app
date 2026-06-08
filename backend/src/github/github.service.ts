@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, Req, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException, Req, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import axios from 'axios';
 import crypto from 'crypto';
@@ -60,6 +60,130 @@ export class GithubService {
         webhookSecret: secret,
       },
     });
+  }
+
+  /**
+   * Live branch list across a project's linked repos, annotated with any
+   * existing task link. Powers the "Link task to branch" UI.
+   */
+  async getProjectBranches(projectId: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      include: { owner: true, repositories: true },
+    });
+
+    if (!project) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+    if (!project.owner.githubToken) {
+      throw new BadRequestException('Project owner has not connected GitHub');
+    }
+    if (project.repositories.length === 0) {
+      return [];
+    }
+
+    // Existing links, keyed by `${repoId}::${branchName}`
+    const links = await this.prisma.taskBranchSync.findMany({
+      where: { projectId },
+      select: {
+        id: true,
+        repoId: true,
+        branchName: true,
+        notionTaskPageId: true,
+        syncState: true,
+      },
+    });
+    const linkMap = new Map(
+      links.map((l) => [`${l.repoId}::${l.branchName}`, l]),
+    );
+
+    // Resolve linked task titles from the cached Notion snapshot
+    const linkedPageIds = links.map((l) => l.notionTaskPageId);
+    const linkedTasks = linkedPageIds.length
+      ? await this.prisma.notionTask.findMany({
+          where: { notionPageId: { in: linkedPageIds } },
+          select: { notionPageId: true, title: true },
+        })
+      : [];
+    const titleMap = new Map(linkedTasks.map((t) => [t.notionPageId, t.title]));
+
+    const branches: {
+      repoId: string;
+      repoFullName: string;
+      name: string;
+      linked: boolean;
+      linkId: string | null;
+      linkedTaskPageId: string | null;
+      linkedTaskTitle: string | null;
+      syncState: string | null;
+    }[] = [];
+
+    for (const repo of project.repositories) {
+      try {
+        const response = await axios.get(
+          `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/branches`,
+          {
+            headers: {
+              Authorization: `Bearer ${project.owner.githubToken}`,
+              Accept: 'application/vnd.github+json',
+            },
+          },
+        );
+
+        for (const branch of response.data) {
+          const link = linkMap.get(`${repo.id}::${branch.name}`);
+          branches.push({
+            repoId: repo.id,
+            repoFullName: `${repo.githubOwner}/${repo.githubRepo}`,
+            name: branch.name,
+            linked: !!link,
+            linkId: link?.id ?? null,
+            linkedTaskPageId: link?.notionTaskPageId ?? null,
+            linkedTaskTitle: link
+              ? titleMap.get(link.notionTaskPageId) ?? null
+              : null,
+            syncState: link?.syncState ?? null,
+          });
+        }
+      } catch (error: any) {
+        const msg =
+          error?.response?.data?.message ?? error?.message ?? 'Unknown error';
+        console.error(
+          `Branch fetch failed for ${repo.githubOwner}/${repo.githubRepo}:`,
+          msg,
+        );
+      }
+    }
+
+    return branches;
+  }
+
+  /** Remove a task↔branch link (lets the user re-link a branch). */
+  async unlinkTaskBranch(projectId: string, syncId: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: {
+        id: projectId,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+      },
+      select: { id: true },
+    });
+    if (!project) {
+      throw new ForbiddenException('You do not have access to this project');
+    }
+
+    const sync = await this.prisma.taskBranchSync.findFirst({
+      where: { id: syncId, projectId },
+      select: { id: true },
+    });
+    if (!sync) {
+      throw new NotFoundException('Task link not found');
+    }
+
+    await this.prisma.taskBranchSync.delete({ where: { id: sync.id } });
+    return { ok: true };
   }
 
   async getActivities(projectId: string) {

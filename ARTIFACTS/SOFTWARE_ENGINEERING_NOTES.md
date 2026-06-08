@@ -123,6 +123,53 @@ latestReviewByReviewer.set(reviewerId, newestReview);
 - Ignoring event timestamps
 - Treating old approval as if it still reflects the final review state
 
+## Idempotent Provisioning on Read
+
+### What it is
+Running a "create if not exists" setup step inside a read endpoint rather than requiring an explicit setup call.
+
+### Why it matters
+Eliminates a separate onboarding step and ensures the system is always in a valid state, even for resources created before the feature existed.
+
+### When to use it
+When a feature requires associated records (channels, roles, config) that can be derived and created at low cost during normal reads.
+
+### How it appears in this project
+`ChatService.ensureChannels` is called inside `getChannels` and `getMessages`. Every call provisions any missing GENERAL/MANAGEMENT/TEAM channels using Prisma `upsert`. Existing channels are left unchanged (no-op `update: {}`).
+
+### Example / Syntax Sketch
+```ts
+await prisma.chatChannel.upsert({
+  where: { projectId_type_team: { projectId, type: 'GENERAL', team: null } },
+  create: { projectId, type: 'GENERAL', team: null, name: 'General' },
+  update: {},
+})
+```
+
+### Common mistakes
+- Calling setup in a write path only — existing resources created before the feature miss setup
+- Not using upsert (running `findFirst + create` can race under concurrent requests)
+- Doing expensive work on every read without the upsert no-op guarantee
+
+## App-Layer ACL for External Services That Lack Fine-Grained Access Control
+
+### What it is
+Storing access-control metadata in your own database and enforcing it when serving data to the client, instead of relying on the external service's native access model.
+
+### Why it matters
+External services (Zoom, Slack, etc.) often expose meetings/rooms at the API level without per-user filtering. The app layer is the only place where custom authorization logic can be consistently applied.
+
+### When to use it
+When an external service doesn't support the access granularity you need, and you control the fetch path between the service and the client.
+
+### How it appears in this project
+`ProjectMeeting` stores `organizerTeam` and `allowedTeams[]` per Zoom meeting. `listProjectMeetings` fetches all Zoom meetings via API, then cross-references with the DB ACL table, filtering out meetings the caller shouldn't see. The Zoom API itself has no concept of team-based restrictions.
+
+### Common mistakes
+- Trusting the external service to enforce access rules it doesn't support
+- Storing ACL in memory (lost on restart) instead of a persistent table
+- Forgetting to handle the "no ACL record" case (must define a safe default — here, show to all)
+
 ## Manual DB Change vs Migration History
 
 ### What it is

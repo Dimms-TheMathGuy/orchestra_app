@@ -1,7 +1,9 @@
-import { Injectable, BadRequestException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TranscriptsService } from '../transcript/transcripts.service';
 import { SummariesService } from '../summaries/summaries.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { RolesService } from '../roles/roles.service';
 import axios from 'axios';
 import crypto from 'crypto';
 
@@ -15,11 +17,15 @@ export class ZoomService {
     private tokenCache: ZoomTokens | null = null;
     private readonly baseUrl = 'https://api.zoom.us/v2';
     private meetingBlockMap = new Map<string, string>();
+    // meetingId -> app userId of whoever created/scheduled the meeting (the host)
+    private meetingHostMap = new Map<string, string>();
 
     constructor(
         private config: ConfigService,
         private transcripts: TranscriptsService,
         private summaries: SummariesService,
+        private prisma: PrismaService,
+        private roles: RolesService,
     ) {}
 
     // --- Token Management ---
@@ -77,6 +83,10 @@ export class ZoomService {
         duration_minutes: number;
         agenda?: string;
         blockId?: string;
+        hostUserId?: string;
+        projectId?: string;
+        organizerTeam?: string | null;
+        allowedTeams?: string[];
     }) {
         const payload = {
             topic: params.topic,
@@ -100,28 +110,133 @@ export class ZoomService {
             this.meetingBlockMap.set(meetingId, params.blockId);
         }
 
+        // Remember who created this meeting so only they get host privileges
+        if (params.hostUserId) {
+            this.meetingHostMap.set(meetingId, params.hostUserId);
+        }
+
+        // Persist ACL metadata for group-zoom (survives restart + enables filtering)
+        if (params.projectId && params.hostUserId) {
+            await this.prisma.projectMeeting.upsert({
+                where: { zoomMeetingId: meetingId },
+                create: {
+                    projectId: params.projectId,
+                    zoomMeetingId: meetingId,
+                    topic: meeting.topic,
+                    hostUserId: params.hostUserId,
+                    organizerTeam: params.organizerTeam ?? null,
+                    allowedTeams: params.allowedTeams ?? [],
+                    startTime: meeting.start_time ? new Date(meeting.start_time) : null,
+                },
+                update: {
+                    organizerTeam: params.organizerTeam ?? null,
+                    allowedTeams: params.allowedTeams ?? [],
+                },
+            });
+        }
+
         return {
             id: meetingId,
             topic: meeting.topic,
             start_time: meeting.start_time,
             duration: meeting.duration,
             join_url: meeting.join_url,
+            start_url: meeting.start_url,
             password: meeting.password,
             agenda: meeting.agenda,
+            isHost: true,
+            organizerTeam: params.organizerTeam ?? null,
+            allowedTeams: params.allowedTeams ?? [],
         };
     }
 
-    async listMeetings() {
+    /** Whether a member context may join a meeting given its ACL. */
+    private canAccessMeeting(
+        acl: { organizerTeam: string | null; allowedTeams: string[] },
+        ctx: { level: number; team: string | null },
+    ): boolean {
+        // Management (PM + board) can join any project meeting
+        if (ctx.level <= 1) return true;
+        // Project-wide meeting (no organizer team) — any member can join
+        if (!acl.organizerTeam) return true;
+        // The organizing team can join
+        if (ctx.team && ctx.team === acl.organizerTeam) return true;
+        // Explicitly invited teams can join
+        if (ctx.team && acl.allowedTeams.includes(ctx.team)) return true;
+        return false;
+    }
+
+    /**
+     * Meetings for a project, filtered by the requesting user's role ACL.
+     * Meetings with a stored ProjectMeeting record are scoped to that project;
+     * meetings with no record (legacy/personal) are shown to all project members.
+     */
+    async listProjectMeetings(projectId: string, userId: string) {
+        const ctx = await this.roles.getMemberContext(projectId, userId);
+        if (!ctx.isMember) {
+            throw new ForbiddenException('Not a project member');
+        }
+
+        const live = await this.listMeetings(userId);
+
+        const aclForProject = await this.prisma.projectMeeting.findMany({
+            where: { projectId },
+        });
+        const aclMap = new Map(aclForProject.map((a) => [a.zoomMeetingId, a]));
+
+        // Meeting IDs claimed by ANY project (to hide other projects' meetings)
+        const claimed = await this.prisma.projectMeeting.findMany({
+            select: { zoomMeetingId: true },
+        });
+        const claimedSet = new Set(claimed.map((c) => c.zoomMeetingId));
+
+        const result: any[] = [];
+        for (const m of live) {
+            const acl = aclMap.get(m.id);
+            if (acl) {
+                if (this.canAccessMeeting(acl, ctx)) {
+                    result.push({
+                        ...m,
+                        organizerTeam: acl.organizerTeam,
+                        allowedTeams: acl.allowedTeams,
+                        scope: acl.organizerTeam ? 'team' : 'project',
+                    });
+                }
+            } else if (!claimedSet.has(m.id)) {
+                // Legacy / personal meeting not tied to any project — visible to all members
+                result.push({ ...m, organizerTeam: null, allowedTeams: [], scope: 'global' });
+            }
+            // else: claimed by another project → skip
+        }
+
+        return result;
+    }
+
+    async listMeetings(userId?: string) {
         const data = await this.zoomRequest<any>('get', '/users/me/meetings?page_size=30&type=scheduled');
 
-        return (data.meetings ?? []).map((m: any) => ({
-            id: String(m.id),
-            topic: m.topic,
-            start_time: m.start_time,
-            duration: m.duration,
-            join_url: m.join_url,
-            password: m.password,
-        }));
+        return (data.meetings ?? []).map((m: any) => {
+            const id = String(m.id);
+            const isHost = userId ? this.meetingHostMap.get(id) === userId : false;
+            return {
+                id,
+                topic: m.topic,
+                start_time: m.start_time,
+                duration: m.duration,
+                join_url: m.join_url,
+                password: m.password,
+                isHost,
+                // start_url is sensitive (grants host control) — only expose to the host
+                start_url: isHost ? m.start_url : undefined,
+            };
+        });
+    }
+
+    // Fresh ZAK token lets the host start a meeting from the embedded web client.
+    // The ZAK embedded in start_url expires (~2h); fetching fresh avoids that.
+    async getZak(): Promise<string> {
+        const data = await this.zoomRequest<any>('get', '/users/me/token?type=zak');
+        return data.token as string;
     }
 
     // --- Recordings & Transcript ---

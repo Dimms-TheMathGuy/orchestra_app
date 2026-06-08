@@ -19,6 +19,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ProjectsModule } from './projects/projects.module';
 import { MeetingReviewModule } from './meeting-review/meeting-review.module';
 import { ChatModule } from './chat/chat.module';
+import { RolesModule } from './roles/roles.module';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { ChatModule } from './chat/chat.module';
     ProjectsModule,
     MeetingReviewModule,
     ChatModule,
+    RolesModule,
+    TasksModule,
   ],
   controllers: [AppController],
   providers: [AppService, ActivityGateway],

@@ -1,0 +1,391 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>ORCHESTRA | Project Refactor Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-dim": "#f1f5f9",
+              "primary": "#49257E",
+              "primary-fixed-dim": "#d6baff",
+              "inverse-on-surface": "#f8fafc",
+              "error-container": "#fee2e2",
+              "outline": "#94a3b8",
+              "tertiary": "#001e62",
+              "error": "#ef4444",
+              "secondary-container": "#f1f5f9",
+              "surface-container-lowest": "#ffffff",
+              "tertiary-fixed": "#dce1ff",
+              "inverse-surface": "#1e293b",
+              "surface-bright": "#ffffff",
+              "on-background": "#0f172a",
+              "tertiary-container": "#003192",
+              "surface-tint": "#6f4ca5",
+              "surface-container-highest": "#e2e8f0",
+              "background": "#F8FAFC",
+              "on-primary": "#ffffff",
+              "primary-fixed": "#ecdcff",
+              "secondary": "#64748b",
+              "primary-dim": "#320667",
+              "inverse-primary": "#d6baff",
+              "on-secondary": "#ffffff",
+              "on-surface-variant": "#64748b",
+              "on-primary-fixed-variant": "#56338c",
+              "on-tertiary-fixed-variant": "#003cae",
+              "surface-container": "#f8fafc",
+              "on-secondary-fixed-variant": "#475569",
+              "on-tertiary-container": "#84a0ff",
+              "surface-variant": "#f1f5f9",
+              "on-error": "#ffffff",
+              "on-tertiary-fixed": "#00164e",
+              "on-secondary-fixed": "#1e293b",
+              "on-secondary-container": "#475569",
+              "outline-variant": "#e2e8f0",
+              "primary-container": "#49257E",
+              "tertiary-dim": "#b5c4ff",
+              "surface": "#F8FAFC",
+              "secondary-dim": "#94a3b8",
+              "tertiary-fixed-dim": "#b5c4ff",
+              "on-surface": "#0f172a",
+              "on-primary-fixed": "#280057",
+              "on-tertiary": "#ffffff",
+              "on-error-container": "#991b1b",
+              "error-dim": "#991b1b",
+              "secondary-fixed-dim": "#94a3b8",
+              "secondary-fixed": "#f1f5f9",
+              "on-primary-container": "#b792f2",
+              "surface-container-low": "#ffffff",
+              "surface-container-high": "#f1f5f9",
+              "vibrant-blue": "#0047D1"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #F8FAFC;
+      }
+      h1, h2, h3, .font-headline {
+        font-family: 'Manrope', sans-serif;
+      }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.8);
+        backdrop-filter: blur(12px);
+      }
+    </style>
+</head>
+<body class="text-on-surface">
+<!-- SideNavBar Anchor -->
+<aside class="h-screen w-64 fixed left-0 top-0 border-r border-slate-200 bg-white flex flex-col py-8 z-50">
+<div class="px-8 mb-10"></div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-8 py-3 text-white font-bold bg-primary rounded-r-full group transition-all duration-150 active:scale-95" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard" style="font-variation-settings: 'FILL' 0;">dashboard</span>
+<span class="text-sm">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-8 py-3 text-slate-500 hover:text-primary hover:bg-slate-50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="folder_copy">folder_copy</span>
+<span class="text-sm">Projects</span>
+</a>
+<a class="flex items-center gap-3 px-8 py-3 text-slate-500 hover:text-primary hover:bg-slate-50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="insights">insights</span>
+<span class="text-sm">Analytics</span>
+</a>
+<a class="flex items-center gap-3 px-8 py-3 text-slate-500 hover:text-primary hover:bg-slate-50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span class="text-sm">Team</span>
+</a>
+<a class="flex items-center gap-3 px-8 py-3 text-slate-500 hover:text-primary hover:bg-slate-50 transition-colors duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="text-sm">Settings</span>
+</a>
+</nav>
+<div class="px-8 mt-auto">
+<button class="w-full bg-primary text-white py-3 px-4 rounded-full font-bold text-sm shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95">
+                New Project
+            </button>
+<div class="mt-8 flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+<img alt="User profile" class="w-10 h-10 rounded-full border-2 border-white" data-alt="close-up portrait of a professional woman with a friendly expression in a modern office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCATq5hMUSCiuzJSlHHGe9J5FPR0V9GWVDo_ANuNj_8BKY8jQarJvcsSh1KhGWbh85eFvyLrGBkZSuAoRdP-hbpfaV-MDM2tp3bpLVRpP3P6QSTBOOUL-_bTebkCh5vvYbB4mB1GOYEX2uhDaDO5QDNV8Z390wMjq1M5ky0koyKcUjaYinx3s64lqdRAJ7DIvwodtpsqUkwaDzsmbZX8UzdGKV6wkjOF0Fd-y5SR0rmUP4DQsddILCJaWEf0W-sKe5b_sn8qdr806I1">
+<div>
+<p class="text-xs font-bold text-slate-900">Ina Architecture</p>
+<p class="text-[10px] text-slate-500">Lead Designer</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper -->
+<main class="ml-64 flex flex-col min-h-screen bg-surface">
+<!-- TopNavBar Anchor -->
+<header class="h-16 flex justify-between items-center px-8 w-full sticky top-0 z-40 glass-card border-b border-slate-200">
+<div class="flex-1 max-w-md">
+<div class="relative group">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-100 border-none rounded-full pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-slate-400" placeholder="Search projects, tasks, or files..." type="text">
+</div>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4 text-slate-400">
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="notifications">notifications</span></button>
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="chat_bubble">chat_bubble</span></button>
+<button class="hover:text-primary transition-colors"><span class="material-symbols-outlined" data-icon="help">help</span></button>
+</div>
+<div class="h-8 w-[1px] bg-slate-200"></div>
+<button class="bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-xs font-bold hover:bg-slate-200 transition-all">
+                    Refactor Status
+                </button>
+</div>
+</header>
+<!-- Dashboard Canvas -->
+<div class="p-8 grid grid-cols-12 gap-8">
+<!-- Left Column: Main Dashboard -->
+<div class="col-span-12 lg:col-span-8 space-y-8">
+<!-- Hero Section -->
+<section class="relative overflow-hidden rounded-xl bg-primary-container p-10 text-on-primary shadow-xl shadow-primary/10">
+<div class="relative z-10">
+<span class="bg-white/20 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4 inline-block">System Active</span>
+<h2 class="text-4xl font-extrabold mb-2 leading-tight">Welcome to Planti.<br>Hello Ina, welcome back!</h2>
+<p class="text-on-primary/80 max-w-md text-sm font-medium">Your refactor pipeline is currently 70% complete. Review the latest performance metrics below.</p>
+</div>
+<!-- Decorative abstract shapes -->
+<div class="absolute -right-20 -bottom-20 w-80 h-80 bg-surface-tint opacity-20 rounded-full blur-3xl"></div>
+<div class="absolute top-[-20%] left-[10%] w-48 h-48 bg-primary opacity-30 rounded-full blur-2xl"></div>
+</section>
+<!-- Top Row Widgets -->
+<div class="grid grid-cols-2 gap-6">
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-sm text-slate-900">Your Performance</h3>
+<span class="material-symbols-outlined text-slate-300 text-lg">more_horiz</span>
+</div>
+<div class="h-32 flex items-end gap-2 px-2">
+<div class="flex-1 bg-slate-100 rounded-t-lg h-[40%]"></div>
+<div class="flex-1 bg-slate-100 rounded-t-lg h-[60%]"></div>
+<div class="flex-1 bg-primary rounded-t-lg h-[85%] relative group">
+<div class="absolute -top-8 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity">Peak</div>
+</div>
+<div class="flex-1 bg-slate-100 rounded-t-lg h-[55%]"></div>
+<div class="flex-1 bg-slate-100 rounded-t-lg h-[70%]"></div>
+<div class="flex-1 bg-slate-100 rounded-t-lg h-[45%]"></div>
+</div>
+<div class="flex justify-between mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+<span class="">Mon</span><span class="">Tue</span><span class="">Wed</span><span class="">Thu</span><span class="">Fri</span><span class="">Sat</span>
+</div>
+</div>
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-sm text-slate-900">Your Contribution</h3>
+<span class="material-symbols-outlined text-slate-300 text-lg">pie_chart</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="relative w-28 h-28">
+<svg class="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+<circle cx="18" cy="18" fill="none" r="16" stroke="#f1f5f9" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="none" r="16" stroke="#49257E" stroke-dasharray="74, 100" stroke-width="4"></circle>
+<circle cx="18" cy="18" fill="none" r="16" stroke="#d6baff" stroke-dasharray="15, 100" stroke-dashoffset="-74" stroke-width="4"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="text-xl font-black text-slate-900">74%</span>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex items-center gap-2 text-[10px] font-bold text-slate-700">
+<div class="w-2 h-2 rounded-full bg-primary"></div> <span class="">Project A</span>
+</div>
+<div class="flex items-center gap-2 text-[10px] font-bold text-slate-500">
+<div class="w-2 h-2 rounded-full bg-primary-fixed-dim"></div> <span class="">Project B</span>
+</div>
+<div class="flex items-center gap-2 text-[10px] font-bold text-slate-400">
+<div class="w-2 h-2 rounded-full bg-slate-200"></div> <span class="">Others</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Projects Section -->
+<section>
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-xl font-extrabold text-slate-900 tracking-tight">Projects</h3>
+<div class="flex bg-slate-100 p-1 rounded-full border border-slate-200">
+<button class="px-4 py-1.5 text-xs font-bold rounded-full bg-white shadow-sm text-primary">On Going</button>
+<button class="px-4 py-1.5 text-xs font-bold text-slate-500 rounded-full">Completed</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Project Card A -->
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-[10px] font-bold text-primary uppercase tracking-wider mb-1">Architecture</p>
+<h4 class="font-bold text-lg text-slate-900">Project A Refactor</h4>
+</div>
+<div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-primary">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">folder</span>
+</div>
+</div>
+<div class="flex -space-x-2 mb-6">
+<img alt="Team leader" class="w-8 h-8 rounded-full border-2 border-white" data-alt="portrait of a confident woman in a business casual outfit with a warm smile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD89vZTvBcyR37zTg3_m_Nachpn88PNAbZ7TDkGDI1pS5agz63ywXUGTwfDrpXCQrJU4W2fA7txoCSD90JX4syZMflR7hgSPUhXdsDD31wKY_rXEymcj_-XF8Su1NpyMt9dGkbUimqzFt0Qh9O3LSv-WIILPJiSGwF-EaJlykCAxe7VkHeT5yi4dX9bmquJk5roqNE6ptWfFExTb1fPnHZIKchbuXeJQ49sNYofzWe50V6lce5_HmJclYmfAKK7f7v2dW3-mVP6s6yb">
+<img alt="Member" class="w-8 h-8 rounded-full border-2 border-white" data-alt="professional man with glasses working at a computer in a modern coworking space" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyl2r8IHOXF6TWjFU9YqB1BVTI2mdPbUv-l0eqVrTViVBJP8kfx3_0mbOxaGingvbmwqOWKFQ8HBT9ZzrIkCx1737Aq_hGh0HtaoMqALzNJ5Al6MijuOvK4YRBVKjDMxgfmHVEzJjAZ1BkZVnMnNIkqDeTnCse4TDM35uETgYAPkE1YeckjE786I4MdcPY16ldEd_TEfX5hQvITcRfvC05b9aDFGVnphgzjrjwNuMi_oUEzfC1fLXOykhSm2XO4J0PKHwoygH9RwFr">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">+3</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold">
+<span class="text-slate-500">Progress</span>
+<span class="text-primary">70% (almost done)</span>
+</div>
+<div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full w-[70%]"></div>
+</div>
+</div>
+</div>
+<!-- Project Card B -->
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
+<div class="flex justify-between items-start mb-6">
+<div>
+<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Infrastructure</p>
+<h4 class="font-bold text-lg text-slate-900">Project B Scale</h4>
+</div>
+<div class="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">cloud</span>
+</div>
+</div>
+<div class="flex -space-x-2 mb-6">
+<img alt="Team leader" class="w-8 h-8 rounded-full border-2 border-white" data-alt="close-up of a young professional man with a friendly expression in a brightly lit studio" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbLAUiUaYEvTpwQ07ZZjLxLl6mNwH5mPR_J7oLrQORdDFGixCOLqfOFO9MH-nKe8h52fBkzGX0D6gqOW5lbKyOF95SEDriWHcc7U5x_e8sVlTdc96qE3TsqGrKsbQhUAJYCSDJiLbq8O9NHEVoxpJHg0tKhqity5M2AgvJVB-FSvXPKfr8BIJ5PZjkNt2u4ONCUinEq454kBFEDy6braR5ZKFToMuxjR_tEIOwPzYXJfn7Jl5YsLqIm9v4QvGca_lHg6WKx6ipqC2R">
+<img alt="Member" class="w-8 h-8 rounded-full border-2 border-white" data-alt="portrait of a young woman with a creative style in an urban setting with soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuATuLUwnvw97NbYQWkWnDPoRmb7WhaK6UcMdNvsC8bgtyxiff9kEQvMyefCSMBT-mkJEgoMk1617ub3WSKZJl43GbD_f4jUZ-RBnkt1JnE2BCioR8BlfS59qokPrTahOEd3LdJI0NXFNgjAyFqaZdmuUP20Rrgb_XkiBHpnvb1SyKPC308u1URT4IspZ_EX-Igix3wjIwfoVasUTFMlPVTWGcbKscYHL_XXo1SPXNaZgraEuI498Jta16lsTdc-NAkTCNzx0_w-9q8W">
+<div class="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-600">JD</div>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between text-xs font-bold">
+<span class="text-slate-500">Progress</span>
+<span class="text-slate-900">45%</span>
+</div>
+<div class="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+<div class="bg-slate-400 h-full rounded-full w-[45%]"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Contextual Stats & Meetings -->
+<div class="col-span-12 lg:col-span-4 space-y-8">
+<!-- On Going Meet Card -->
+<div class="bg-vibrant-blue p-6 rounded-xl text-white shadow-xl shadow-vibrant-blue/30">
+<div class="flex items-center justify-between mb-4">
+<span class="text-[10px] font-bold px-2 py-0.5 bg-white/20 rounded-full">LIVE NOW</span>
+<span class="material-symbols-outlined">videocam</span>
+</div>
+<h3 class="text-lg font-bold mb-1">Daily Refactor Sync</h3>
+<p class="text-xs text-white/80 mb-6">Meeting with the core infrastructure team regarding the API migration.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Avatar" class="w-8 h-8 rounded-full border-2 border-vibrant-blue" data-alt="smiling face of a professional woman with brown hair in a bright office environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVReOQ9NtRp68Ir6RUnNDx7-byh2Z9ozJ-yfcnrz8gVkux7zggKeOW6t_rUUuTV58j6YPt-HcxlCvPKiqpqOpKd2JNMGvLC5ve7eDJgi7isTt_X6E4C89zFfbLz--cPbqYcrmIJkt_dhwTwOuY6WPjkL9eWlWx7slX8q5b0ztTrLXTaL-knAvWB7w2MFCfNi60T6oUN7wUEIcj8fpbLlMBbZwpT515O0o6ldi3ottNae6bSCpQxkIqA_82jlDO2PO43-o0vFg6Y7Vp">
+<img alt="Avatar" class="w-8 h-8 rounded-full border-2 border-vibrant-blue" data-alt="portrait of a young man with a focused expression in a modern creative studio" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD-9rkU5wUDdrZDlaLtTkuVjnwX4FepTWbr92uhuJWCUdnqQb3jPrw72HMw9wtYjQBdffr_VfiB46_1gh7Hcmez3Ric5Pbv3-smIf80xcS9U1g4oNhxRIaJ5yzhVH8A4_Dc-B7yjkPiCrcU6igvjFMBSGc-3wdWfYhrAwd6vGOf7uu-eZbqwkKyZsoziCaqnIM9NhCmyBZyM0Sb9sER9UhMiLFxS2oougxIe92_ldmRYqnAqToAYD-4hBVVhSV7rJ5BG-2E4WpPwFNk">
+</div>
+<button class="bg-white text-vibrant-blue text-xs font-bold px-4 py-2 rounded-full hover:bg-white/90 transition-colors">Join Call</button>
+</div>
+</div>
+<!-- Upcoming Meet Calendar -->
+<div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+<div class="flex items-center justify-between mb-4">
+<h3 class="font-bold text-sm text-slate-900 uppercase tracking-widest">Upcoming Meet</h3>
+<button class="text-primary text-xs font-bold hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-7 gap-1 text-center mb-4">
+<span class="text-[9px] font-bold text-slate-400">M</span>
+<span class="text-[9px] font-bold text-slate-400">T</span>
+<span class="text-[9px] font-bold text-slate-400">W</span>
+<span class="text-[9px] font-bold text-slate-400">T</span>
+<span class="text-[9px] font-bold text-slate-400">F</span>
+<span class="text-[9px] font-bold text-slate-400">S</span>
+<span class="text-[9px] font-bold text-slate-400">S</span>
+<span class="text-xs py-2 text-slate-400">12</span>
+<span class="text-xs py-2 text-slate-400">13</span>
+<span class="text-xs py-2 bg-primary text-white font-bold rounded-lg">14</span>
+<span class="text-xs py-2">15</span>
+<span class="text-xs py-2">16</span>
+<span class="text-xs py-2">17</span>
+<span class="text-xs py-2">18</span>
+</div>
+<div class="space-y-3">
+<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+<div class="w-1 h-8 bg-primary rounded-full"></div>
+<div>
+<p class="text-[10px] font-bold text-slate-900">Sprint Planning</p>
+<p class="text-[9px] text-slate-500">09:00 AM - 10:30 AM</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
+<div class="w-1 h-8 bg-slate-300 rounded-full"></div>
+<div>
+<p class="text-[10px] font-bold text-slate-900">Design Review</p>
+<p class="text-[9px] text-slate-500">02:00 PM - 03:00 PM</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Task Summary Widgets -->
+<div class="grid grid-cols-1 gap-4">
+<div class="bg-slate-50 p-5 rounded-xl border border-slate-200">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 mb-1">Planned Today</p>
+<h4 class="text-2xl font-black text-slate-900">12 Tasks</h4>
+</div>
+<span class="material-symbols-outlined text-slate-400">checklist</span>
+</div>
+</div>
+<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-slate-500 mb-1">Finished Yesterday</p>
+<h4 class="text-2xl font-black text-slate-900">24 Items</h4>
+</div>
+<span class="material-symbols-outlined text-slate-900" style="font-variation-settings: 'FILL' 0;">verified</span>
+</div>
+</div>
+<div class="bg-red-50 p-5 rounded-xl border border-red-100">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-xs font-bold text-red-500/70 mb-1">Due This Week</p>
+<h4 class="text-2xl font-black text-red-600">03 Critical</h4>
+</div>
+<span class="material-symbols-outlined text-red-500">report</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer Anchor -->
+<footer class="flex justify-between items-center px-12 py-8 ml-64 bg-white border-t border-slate-200">
+<div class="flex items-center gap-2">
+<span class="text-slate-400 font-headline font-bold text-xs uppercase tracking-widest">© 2024 ORCHESTRA Editorial Desk</span>
+</div>
+<div class="flex gap-8">
+<a class="text-slate-400 hover:text-primary transition-colors font-inter text-xs uppercase tracking-widest" href="#">Privacy Policy</a>
+<a class="text-slate-400 hover:text-primary transition-colors font-inter text-xs uppercase tracking-widest" href="#">Terms of Service</a>
+<a class="text-slate-400 hover:text-primary transition-colors font-inter text-xs uppercase tracking-widest" href="#">Support</a>
+</div>
+</footer>
+
+
+
+
+</body></html>

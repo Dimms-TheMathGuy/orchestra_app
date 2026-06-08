@@ -162,6 +162,146 @@ export class NotionService {
         return converted;
     }
 
+    /**
+     * Resolve a configured Notion id into concrete database ids.
+     * The project may store either a database id directly, or a page/block id
+     * that *contains* child databases (the AI Note Taker template pattern).
+     */
+    async resolveDatabaseIds(idOrPageId: string): Promise<string[]> {
+        const apiKey = this.configService.get<string>('NOTION_API_KEY');
+
+        // First: is it a database on its own?
+        const res = await fetch(`https://api.notion.com/v1/databases/${idOrPageId}`, {
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                'Notion-Version': '2022-06-28',
+            },
+        });
+        if (res.ok) return [idOrPageId];
+
+        // Otherwise treat it as a page/block and collect its child databases
+        try {
+            const response = await this.notionClient.blocks.children.list({ block_id: idOrPageId });
+            return response.results
+                .filter((x: any) => 'type' in x && x.type === 'child_database')
+                .map((x: any) => x.id);
+        } catch (error) {
+            console.error('RESOLVE DATABASE IDS ERROR:', error);
+            return [];
+        }
+    }
+
+    /** Map a raw Notion status/select name to one of: todo | in_progress | done. */
+    normalizeStatusGroup(statusName?: string | null): 'todo' | 'in_progress' | 'done' {
+        const s = (statusName ?? '').toLowerCase().trim();
+        if (!s) return 'todo';
+        if (/(done|complete|closed|finished|shipped|merged)/.test(s)) return 'done';
+        if (/(progress|review|doing|wip|testing|qa|ongoing|active)/.test(s)) return 'in_progress';
+        return 'todo';
+    }
+
+    /**
+     * Query a Notion task database and extract a flat task list.
+     * For each page we pull: title, status (first status/select prop), and assignees
+     * (first people prop — emails only present if the integration can read user info).
+     */
+    async queryDatabaseTasks(databaseId: string) {
+        const tasks: {
+            notionPageId: string;
+            title: string;
+            status: string | null;
+            statusGroup: 'todo' | 'in_progress' | 'done';
+            assigneeEmails: string[];
+            assigneeNames: string[];
+            url: string | null;
+        }[] = [];
+
+        const apiKey = this.configService.get<string>('NOTION_API_KEY');
+
+        try {
+            let cursor: string | undefined = undefined;
+            do {
+                // Notion SDK v5 dropped databases.query (moved to data sources), so we
+                // call the classic REST endpoint directly with a pinned API version —
+                // same approach as fetchAllDatabaseSchema.
+                const response = await fetch(
+                    `https://api.notion.com/v1/databases/${databaseId}/query`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            Authorization: `Bearer ${apiKey}`,
+                            'Notion-Version': '2022-06-28',
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ start_cursor: cursor, page_size: 100 }),
+                    },
+                );
+
+                if (!response.ok) {
+                    const errBody = await response.json().catch(() => null);
+                    throw new Error(
+                        `Notion API error ${response.status}: ${errBody?.message ?? 'unknown'}`,
+                    );
+                }
+
+                const res: any = await response.json();
+
+                for (const page of res.results) {
+                    if (!('properties' in page)) continue;
+                    const props: Record<string, any> = page.properties;
+
+                    let title = '';
+                    let status: string | null = null;
+                    const assigneeEmails: string[] = [];
+                    const assigneeNames: string[] = [];
+
+                    for (const value of Object.values(props)) {
+                        switch (value?.type) {
+                            case 'title':
+                                if (!title) {
+                                    title = (value.title ?? []).map((t: any) => t.plain_text).join('');
+                                }
+                                break;
+                            case 'status':
+                                if (status === null) status = value.status?.name ?? null;
+                                break;
+                            case 'select':
+                                // Use a select only if we haven't found a real status property
+                                if (status === null) status = value.select?.name ?? null;
+                                break;
+                            case 'people':
+                                for (const person of value.people ?? []) {
+                                    if (person?.name) assigneeNames.push(person.name);
+                                    const email = person?.person?.email;
+                                    if (email) assigneeEmails.push(email);
+                                }
+                                break;
+                        }
+                    }
+
+                    tasks.push({
+                        notionPageId: page.id,
+                        title: title || 'Untitled task',
+                        status,
+                        statusGroup: this.normalizeStatusGroup(status),
+                        assigneeEmails,
+                        assigneeNames,
+                        url: page.url ?? null,
+                    });
+                }
+
+                cursor = res.has_more ? res.next_cursor : undefined;
+            } while (cursor);
+        } catch (error: any) {
+            console.error('NOTION TASK QUERY ERROR:', error?.body ?? error?.message ?? error);
+            throw new BadRequestException(
+                error?.message || 'Failed to query Notion task database',
+            );
+        }
+
+        return tasks;
+    }
+
     async createPage(databaseId: string, properties: any) {
         try {
             await this.notionClient.pages.create({ parent: { database_id: databaseId }, properties: properties });

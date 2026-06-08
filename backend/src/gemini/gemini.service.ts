@@ -101,6 +101,54 @@ ${text}`;
         return validatedDrafts.data;
     }
 
+    async quickSummarize(text: string): Promise<{ summary: string; keyDecisions: string[] }> {
+        if (process.env.MOCK_GEMINI === 'true') {
+            return {
+                summary: 'The team discussed project progress, upcoming deadlines, and assigned responsibilities for the next sprint.',
+                keyDecisions: [
+                    'Launch new dashboard by end of sprint',
+                    'Fix authentication bug before next release',
+                    'Schedule follow-up meeting next Thursday',
+                ],
+            };
+        }
+
+        const client = this.getClient();
+        const prompt = `You are an AI meeting summarizer.
+Return a JSON object with exactly two fields:
+{
+  "summary": "A concise 2-4 sentence summary of the meeting",
+  "keyDecisions": ["Decision or action item 1", "Decision or action item 2", ...]
+}
+
+Return valid JSON only. No markdown, no code fences, no extra text.
+Extract the 3-7 most important decisions or action items from this transcript.
+
+Transcript:
+${text}`;
+
+        const completion = await client.chat.completions.create({
+            model: 'llama-3.3-70b-versatile',
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.1,
+        });
+
+        const rawResponse = completion.choices[0]?.message?.content?.trim() ?? '';
+        const cleanResponse = this.stripCodeFence(rawResponse);
+
+        try {
+            const parsed = JSON.parse(cleanResponse);
+            return {
+                summary: String(parsed.summary ?? ''),
+                keyDecisions: Array.isArray(parsed.keyDecisions)
+                    ? parsed.keyDecisions.map(String)
+                    : [],
+            };
+        } catch {
+            throw new BadGatewayException('AI returned invalid JSON for quick summary');
+        }
+    }
+
     // Mock to unblock demos when external API quota/credentials are unavailable
     private mockSummarize(schemaContext: any, transcriptText: string): DatabaseDraft[] {
         const contexts: Array<{ databaseId?: string; title?: string }> = Array.isArray(schemaContext) ? schemaContext : []

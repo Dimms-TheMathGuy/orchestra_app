@@ -60,6 +60,37 @@
 - Notion `pages.update(...)` targets an existing task page directly by `page_id`; the payload shape depends on the Notion property type (`checkbox`, `status`, `select`, etc.).
 - Supabase direct database host may be unreachable from some local networks; in this project, the session pooler connection string can be a more practical development connection path.
 
+## Role System (Batch 2)
+- 13 default roles in a 4-level hierarchy: 0 = PM, 1 = Board (Tech Lead, Secretary), 2 = Team Leads, 3 = Members.
+- `ROLE_TEAM` map in `roles.service.ts` links each role name to a team key (`frontend`, `backend`, `qa`, `design`, `devops`) or `null` for management roles.
+- `TEAM_LABEL` map converts team keys to display names.
+- `MemberContext` is the resolved runtime identity of a user within a project: `{ isMember, isOwner, level, team, roleName }`.
+- Project owner always has `level = 0` even if the PM role record is absent (fallback in `getMemberContext`).
+- `getPendingRequests` must filter by `status: 'PENDING'` — fetching all requests pollutes the approval UI with already-reviewed items.
+- Roles are seeded idempotently on project creation and lazily for existing projects the first time `getProjectRoles` is called.
+
+## Channel System (Batch 3)
+- Three channel types: `GENERAL` (all members), `MANAGEMENT` (level ≤ 1 only), `TEAM` (team members + board).
+- Channels are provisioned via `ensureChannels`, called on every `getChannels` or `getMessages` call. Uses Prisma `upsert` — safe to call repeatedly.
+- Team channels are created dynamically based on which teams are represented in current member roles. A team channel is not created until at least one member has a role in that team.
+- Legacy messages (`channelId = null`) surface in the GENERAL channel via an `OR` query. This keeps old chat history accessible without migration.
+- Unique constraint: `[projectId, type, team]` where `team` is `null` for GENERAL/MANAGEMENT.
+
+## Zoom ACL (Batch 3)
+- Zoom's API does not support per-user participant filtering natively. ACL is implemented in the app layer via the `ProjectMeeting` table.
+- `ProjectMeeting` stores: `organizerTeam`, `allowedTeams[]`, `hostUserId`. The Zoom `meetingId` is the join key.
+- `listProjectMeetings` fetches live Zoom meeting list then cross-references with `ProjectMeeting` records. Meetings not claimed by the current project are hidden.
+- Board members (level ≤ 1) bypass all meeting ACL — they can always join any meeting in their projects.
+- If a meeting has no `organizerTeam`, it is treated as project-wide and visible to all members.
+
+## Notion Task Sync (Batch 4)
+- `Project.notionDbId` is NOT guaranteed to be a database id — in practice it often holds a **page/block id** that *contains* child databases (the AI Note Taker template pattern). Querying it directly as a database returns a Notion 400: "Provided ID … is a page, not a database."
+- `NotionService.resolveDatabaseIds(id)` handles both: tries `GET /databases/{id}`; on failure lists `blocks.children` and collects `child_database` ids. Task sync queries every resolved database and tags each task with its own `notionDatabaseId`.
+- A single template page can mix database kinds (e.g. "Tasks", "bugs and Report", "Meeting Summaries"). Sync pulls rows from all of them; non-task rows (no assignee) simply never match a user, so they don't inflate per-user stats — but they DO appear in the link-to-branch task picker.
+- Notion SDK v5 removed `databases.query`; query via the REST endpoint `POST /v1/databases/{id}/query` pinned to `Notion-Version: 2022-06-28`.
+- Assignee matching: the integration must have the "read user information including email" capability for `people.person.email` to be populated in query results. This project's integration HAS it (`GET /v1/users` returns emails), so dashboard stats match by Notion assignee email → Orchestra `user.email`, with `assigneeNames` as a fallback.
+- The completion-property schema differs per child database, so the link-to-branch form fetches the schema of the *selected task's* `notionDatabaseId`, not a single project-wide schema.
+
 ## Open Questions
 - When persistence is added, decide whether draft edits are saved as separate revision history or only latest state.
 - At merge time, should approval be trusted from stored local state or re-validated from GitHub API?
