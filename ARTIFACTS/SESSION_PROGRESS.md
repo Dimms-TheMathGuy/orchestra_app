@@ -41,6 +41,10 @@
 - Schema endpoint is now per-database: `GET /projects/:id/notion/schema/:databaseId` (link form fetches the selected task's db schema).
 - Branch list shows linked-task **title** + colored sync-state pill (Linked/In progress/In review/Done) and an **unlink** (X) button → new `DELETE /api/github/:id/task-branch-sync/:syncId`.
 
+### Batch 6 — Bug fixes & polish
+- **Chat "Failed to load channels" fix**: `ensureChannels` used `prisma.chatChannel.upsert()` with `team: null` in the composite unique `where` clause — Prisma throws at runtime ("Argument `team` must not be null") even though the TypeScript `null as any` cast silenced the type error. Fixed by replacing all three `upsert` calls with a `findMany` existence check + `createMany({ skipDuplicates: true })` pattern.
+- **Logo size increase**: Sidebar expanded logo raised from `height={30}` → `height={44}` in `Sidebar.tsx`.
+
 ## Pending Next Steps
 - (none queued). Future ideas: filter the link-task picker to task-like databases only; Notion webhook for true realtime; persist Notion assignee→Orchestra user mapping for name-based assignees.
 

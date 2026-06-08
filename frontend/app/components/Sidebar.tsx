@@ -96,7 +96,7 @@ export function Sidebar({ isWorkspace = false }: SidebarProps) {
           </button>
         ) : (
           <>
-            <Logo height={30} />
+            <Logo height={44} />
             <button
               onClick={toggleCollapsed}
               aria-label="Collapse sidebar"
