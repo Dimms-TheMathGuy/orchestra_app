@@ -54,6 +54,8 @@ export class GithubController {
         validated.completionPropertyName,
         validated.completionPropertyType,
         validated.completionValue,
+        validated.inProgressValue,
+        validated.requireApproval,
       );
     } catch (error: any) {
       throw new BadRequestException(error.errors ?? error.message);
@@ -95,6 +97,16 @@ export class GithubController {
   @Post('projects/:projectId/sync')
   syncProject(@Param('projectId') projectId: string, @Req() req: any) {
     return this.githubService.syncProject(projectId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':projectId/repository/:repoId/repair-webhook')
+  repairWebhook(
+    @Param('projectId') projectId: string,
+    @Param('repoId') repoId: string,
+    @Req() req: any,
+  ) {
+    return this.githubService.repairRepoWebhook(projectId, repoId, req.user.id);
   }
 
   @Post('webhook')

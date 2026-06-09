@@ -13,8 +13,10 @@ export class PasskeyController {
   constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
   rpName = 'Orchestra';
-  rpID = 'localhost';
-  origin = 'http://localhost:3001';
+  // WebAuthn is bound to the frontend domain. In prod set WEBAUTHN_RP_ID to the
+  // bare host (e.g. orchestra.vercel.app) and WEBAUTHN_ORIGIN to its full origin.
+  rpID = process.env.WEBAUTHN_RP_ID ?? 'localhost';
+  origin = process.env.WEBAUTHN_ORIGIN ?? 'http://localhost:3001';
 
   @Get('status/:userId')
   async getPasskeyStatus(@Param('userId') userId: string) {

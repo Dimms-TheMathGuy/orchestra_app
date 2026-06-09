@@ -62,6 +62,39 @@ describe('GithubController', () => {
       'Status',
       'status',
       'Done',
+      undefined,
+      false,
+    );
+  });
+
+  it('forwards inProgressValue and requireApproval when provided', async () => {
+    const body = {
+      repoId: 'repo-1',
+      taskId: 'task-1',
+      branchName: 'feature/github-sync',
+      targetBranch: 'main',
+      databaseId: 'db-1',
+      completionPropertyName: 'Status',
+      completionPropertyType: 'status',
+      completionValue: 'Done',
+      inProgressValue: 'In progress',
+      requireApproval: true,
+    };
+
+    await controller.linkTaskToBranch('project-1', body);
+
+    expect(githubService.linkTaskToBranch).toHaveBeenCalledWith(
+      'project-1',
+      'repo-1',
+      'task-1',
+      'feature/github-sync',
+      'main',
+      'db-1',
+      'Status',
+      'status',
+      'Done',
+      'In progress',
+      true,
     );
   });
 

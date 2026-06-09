@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException, ForbiddenException, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, BadRequestException, ForbiddenException, InternalServerErrorException, UnauthorizedException, NotFoundException, BadGatewayException, HttpException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TranscriptsService } from '../transcript/transcripts.service';
 import { SummariesService } from '../summaries/summaries.service';
@@ -28,6 +28,36 @@ export class ZoomService {
         private roles: RolesService,
     ) {}
 
+    // --- Error translation ---
+
+    /**
+     * Turn a raw axios/Zoom failure into an HttpException that carries Zoom's
+     * actual reason, so the client sees something better than "Internal server error".
+     */
+    private translateZoomError(error: unknown, context: string): never {
+        if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            const data: any = error.response?.data;
+            const zoomMessage =
+                (data && (data.message || data.reason)) ||
+                (typeof data === 'string' && data ? data : null);
+            const detail = `${context}: ${zoomMessage ?? error.message}`;
+
+            switch (status) {
+                case 400: throw new BadRequestException(detail);
+                case 401: throw new UnauthorizedException(detail);
+                case 403: throw new ForbiddenException(detail);
+                case 404: throw new NotFoundException(detail);
+                case 429: throw new HttpException(detail, 429);
+            }
+            // No response (network/timeout) or an upstream 5xx — it's a gateway problem.
+            throw new BadGatewayException(detail);
+        }
+        throw new InternalServerErrorException(
+            `${context}: ${(error as any)?.message ?? 'Unknown error'}`,
+        );
+    }
+
     // --- Token Management ---
 
     private async getAccessToken(): Promise<string> {
@@ -45,16 +75,21 @@ export class ZoomService {
             );
         }
 
-        const res = await axios.post(
-            'https://zoom.us/oauth/token',
-            new URLSearchParams({ grant_type: 'account_credentials', account_id: accountId }),
-            {
-                headers: {
-                    Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
-                    'Content-Type': 'application/x-www-form-urlencoded',
+        let res;
+        try {
+            res = await axios.post(
+                'https://zoom.us/oauth/token',
+                new URLSearchParams({ grant_type: 'account_credentials', account_id: accountId }),
+                {
+                    headers: {
+                        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
                 },
-            },
-        );
+            );
+        } catch (error) {
+            this.translateZoomError(error, 'Zoom authentication failed (check ZOOM_ACCOUNT_ID / CLIENT_ID / CLIENT_SECRET)');
+        }
 
         this.tokenCache = {
             access_token: res.data.access_token,
@@ -66,13 +101,17 @@ export class ZoomService {
 
     private async zoomRequest<T = any>(method: 'get' | 'post', path: string, data?: unknown): Promise<T> {
         const token = await this.getAccessToken();
-        const res = await axios({
-            method,
-            url: `${this.baseUrl}${path}`,
-            headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-            data,
-        });
-        return res.data;
+        try {
+            const res = await axios({
+                method,
+                url: `${this.baseUrl}${path}`,
+                headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                data,
+            });
+            return res.data;
+        } catch (error) {
+            this.translateZoomError(error, `Zoom API ${method.toUpperCase()} ${path} failed`);
+        }
     }
 
     // --- Meetings ---
@@ -284,7 +323,12 @@ export class ZoomService {
         }
 
         const token = await this.getAccessToken();
-        const res = await axios.get(`${transcriptFile.download_url}?access_token=${token}`);
+        let res;
+        try {
+            res = await axios.get(`${transcriptFile.download_url}?access_token=${token}`);
+        } catch (error) {
+            this.translateZoomError(error, `Failed to download transcript for meeting ${meetingId}`);
+        }
         const transcriptText = typeof res.data === 'string' ? res.data : JSON.stringify(res.data);
 
         // Save into shared transcript store so summaries can use it

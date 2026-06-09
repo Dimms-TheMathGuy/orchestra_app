@@ -104,7 +104,8 @@ export class AuthService {
       },
     });
 
-    const resetLink = `http://localhost:3001/reset-password?token=${token}`;
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
     console.log('RESET LINK:', resetLink);
 

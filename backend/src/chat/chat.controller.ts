@@ -35,6 +35,17 @@ export class ChatController {
     return this.chatService.sendMessage(projectId, req.user?.id, content, channelId)
   }
 
+  /** Pin / unpin a message in a channel */
+  @Post('channels/:channelId/messages/:messageId/pin')
+  async togglePin(
+    @Param('projectId') projectId: string,
+    @Param('channelId') channelId: string,
+    @Param('messageId') messageId: string,
+    @Req() req: any,
+  ) {
+    return this.chatService.togglePin(projectId, req.user?.id, messageId, channelId)
+  }
+
   /** Legacy: messages in the General channel */
   @Get('messages')
   async getMessages(@Param('projectId') projectId: string, @Req() req: any) {

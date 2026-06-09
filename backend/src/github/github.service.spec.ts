@@ -7,8 +7,8 @@ import { GithubService } from './github.service';
 describe('GithubService', () => {
   let service: GithubService;
   let prismaService: any;
-  let gateway: { emitToProject: jest.Mock };
-  let notionService: { markTaskComplete: jest.Mock };
+  let gateway: { emitToProject: jest.Mock; emitTaskSync: jest.Mock };
+  let notionService: { markTaskComplete: jest.Mock; markTaskInProgress: jest.Mock };
 
   beforeEach(async () => {
     prismaService = {
@@ -17,6 +17,7 @@ describe('GithubService', () => {
       },
       githubActivity: {
         create: jest.fn(),
+        upsert: jest.fn(),
       },
       project: {
         findFirst: jest.fn(),
@@ -28,15 +29,18 @@ describe('GithubService', () => {
         findUnique: jest.fn(),
         update: jest.fn(),
         create: jest.fn(),
+        delete: jest.fn(),
       },
     };
 
     gateway = {
       emitToProject: jest.fn(),
+      emitTaskSync: jest.fn(),
     };
 
     notionService = {
       markTaskComplete: jest.fn(),
+      markTaskInProgress: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -104,6 +108,11 @@ describe('GithubService', () => {
       projectId: 'project-1',
       repoId: 'repo-1',
     });
+    prismaService.githubActivity.upsert.mockResolvedValue({
+      id: 'activity-1',
+      projectId: 'project-1',
+      repoId: 'repo-1',
+    });
 
     prismaService.project.findFirst.mockResolvedValue({
       id: 'project-1',
@@ -141,7 +150,7 @@ describe('GithubService', () => {
     expect(notionService.markTaskComplete).not.toHaveBeenCalled();
   });
 
-  it('moves a linked task back to IN_PROGRESS when a PR closes without merge', async () => {
+  it('records the PR but leaves state unchanged when a PR closes without merge', async () => {
     const payload = payloadFactory({
       action: 'closed',
       pull_request: {
@@ -156,14 +165,46 @@ describe('GithubService', () => {
       where: { id: 'sync-1' },
       data: {
         prNumber: 7,
-        syncState: 'IN_PROGRESS',
         lastSyncedAt: expect.any(Date),
       },
     });
     expect(notionService.markTaskComplete).not.toHaveBeenCalled();
   });
 
-  it('marks the task DONE and updates Notion when merged PR has approved reviews', async () => {
+  it('marks the task DONE on merge without a review when requireApproval is off (default)', async () => {
+    const payload = payloadFactory({
+      action: 'closed',
+      pull_request: {
+        ...payloadFactory().pull_request,
+        merged: true,
+      },
+    });
+
+    await service.handlePullRequest(payload);
+
+    // Gate is opt-in — a plain self-merge should not require a review lookup.
+    expect(service.getReviewState).not.toHaveBeenCalled();
+    expect(notionService.markTaskComplete).toHaveBeenCalledWith(
+      'page-1',
+      'Status',
+      'status',
+      'Done',
+    );
+    // Completing a task auto-unlinks it and notifies the project.
+    expect(prismaService.taskBranchSync.delete).toHaveBeenCalledWith({
+      where: { id: 'sync-1' },
+    });
+    expect(gateway.emitTaskSync).toHaveBeenCalledWith(
+      'project-1',
+      expect.objectContaining({ syncState: 'DONE', unlinked: true }),
+    );
+  });
+
+  it('marks the task DONE when requireApproval is on and the PR is approved', async () => {
+    prismaService.taskBranchSync.findUnique.mockResolvedValue(
+      linkedTaskFactory({ requireApproval: true }),
+    );
+
     const payload = payloadFactory({
       action: 'closed',
       pull_request: {
@@ -186,17 +227,12 @@ describe('GithubService', () => {
       'status',
       'Done',
     );
-    expect(prismaService.taskBranchSync.update).toHaveBeenNthCalledWith(1, {
-      where: { id: 'sync-1' },
-      data: {
-        prNumber: 7,
-        syncState: 'DONE',
-        lastSyncedAt: expect.any(Date),
-      },
-    });
   });
 
-  it('does not mark the task DONE when merged PR has no approved review', async () => {
+  it('does not mark the task DONE when requireApproval is on and there is no approved review', async () => {
+    prismaService.taskBranchSync.findUnique.mockResolvedValue(
+      linkedTaskFactory({ requireApproval: true }),
+    );
     (service.getReviewState as jest.Mock).mockResolvedValue(false);
 
     const payload = payloadFactory({

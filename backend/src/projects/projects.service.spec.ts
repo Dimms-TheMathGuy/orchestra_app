@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../prisma/prisma.service';
+import { RolesService } from '../roles/roles.service';
 import { ProjectsService } from './projects.service';
 
 describe('ProjectsService', () => {
@@ -15,6 +16,7 @@ describe('ProjectsService', () => {
       create: jest.Mock;
     };
   };
+  let rolesService: { seedProjectRoles: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -29,12 +31,20 @@ describe('ProjectsService', () => {
       },
     };
 
+    rolesService = {
+      seedProjectRoles: jest.fn().mockResolvedValue(undefined),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProjectsService,
         {
           provide: PrismaService,
           useValue: prisma,
+        },
+        {
+          provide: RolesService,
+          useValue: rolesService,
         },
       ],
     }).compile();
@@ -118,6 +128,7 @@ describe('ProjectsService', () => {
         role: 'OWNER',
       },
     });
+    expect(rolesService.seedProjectRoles).toHaveBeenCalledWith('project-1', 'user-1');
     expect(result).toEqual(
       expect.objectContaining({
         id: 'project-1',

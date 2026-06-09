@@ -26,4 +26,14 @@ export class ActivityGateway {
       .to(`project-${projectId}`)
       .emit('newActivity', activity);
   }
+
+  /**
+   * Notify a project that a task↔branch link changed state (or was unlinked on
+   * completion), so connected clients can refresh their branch list live.
+   */
+  emitTaskSync(projectId: string, payload: any) {
+    this.server
+      .to(`project-${projectId}`)
+      .emit('taskSyncUpdate', payload);
+  }
 }

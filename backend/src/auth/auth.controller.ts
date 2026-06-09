@@ -82,7 +82,8 @@ export class AuthController {
       },
     });
 
-    return res.redirect('http://localhost:3001/dashboard/settings?github=connected');
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:3001';
+    return res.redirect(`${frontendUrl}/dashboard/settings?github=connected`);
   }
 
   @Post('forgot-password')

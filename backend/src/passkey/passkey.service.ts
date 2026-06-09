@@ -13,8 +13,9 @@ export class PasskeyService {
   constructor(private readonly prisma: PrismaService) {}
 
   private rpName = 'Orchestra';
-  private rpID = 'localhost';
-  private origin = 'http://localhost:3000';
+  // Must match the frontend domain the browser runs on (see passkey.controller).
+  private rpID = process.env.WEBAUTHN_RP_ID ?? 'localhost';
+  private origin = process.env.WEBAUTHN_ORIGIN ?? 'http://localhost:3001';
 
   async generateRegisterOptions(userId: string) {
     const user = await this.prisma.user.findUnique({

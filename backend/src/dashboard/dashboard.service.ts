@@ -1,6 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SyncState } from '@prisma/client';
 import { userMatchesAssignee } from '../notion/assignee-match.util';
 
 @Injectable()
@@ -53,7 +52,6 @@ export class DashboardService {
           },
           take: 10,
         },
-        taskBranchSyncs: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -74,15 +72,41 @@ export class DashboardService {
       throw new NotFoundException('User not found');
     }
 
+    // Pull the cached Notion task snapshot for every project up front — it drives
+    // both per-project progress (below) and the user's task cards (further down).
+    // Progress is the share of *all* tasks (any assignee, any child database) that
+    // are done, so it mirrors the Notion board rather than the GitHub branch links.
+    const projectIds = projectsRaw.map((p) => p.id);
+    const cachedTasks = projectIds.length
+      ? await this.prisma.notionTask.findMany({
+          where: { projectId: { in: projectIds } },
+          select: {
+            notionPageId: true,
+            projectId: true,
+            title: true,
+            status: true,
+            statusGroup: true,
+            url: true,
+            dueDate: true,
+            assigneeEmails: true,
+            assigneeNames: true,
+          },
+        })
+      : [];
+
+    // projectId → { total, done } across the whole Notion board.
+    const taskStatsByProject = new Map<string, { total: number; done: number }>();
+    for (const task of cachedTasks) {
+      const stat = taskStatsByProject.get(task.projectId) ?? { total: 0, done: 0 };
+      stat.total += 1;
+      if (task.statusGroup === 'done') stat.done += 1;
+      taskStatsByProject.set(task.projectId, stat);
+    }
+
     const projects = projectsRaw.map((project) => {
-      const tasks = project.taskBranchSyncs;
-
-      const doneTasks = tasks.filter(
-        (task) => task.syncState === SyncState.DONE,
-      ).length;
-
+      const stat = taskStatsByProject.get(project.id);
       const progress =
-        tasks.length > 0 ? Math.round((doneTasks / tasks.length) * 100) : 0;
+        stat && stat.total > 0 ? Math.round((stat.done / stat.total) * 100) : 0;
 
       const currentMember = project.members.find(
         (member) => member.userId === userId,
@@ -116,44 +140,16 @@ export class DashboardService {
       (project) => project.status === 'completed',
     ).length;
 
-    const totalTasks = projectsRaw.reduce((total, project) => {
-      return total + project.taskBranchSyncs.length;
-    }, 0);
+    // Board-wide totals from the Notion snapshot (every task, any assignee).
+    const totalTasks = cachedTasks.length;
+    const doneTasks = cachedTasks.filter((t) => t.statusGroup === 'done').length;
 
-    const doneTasks = projectsRaw.reduce((total, project) => {
-      return (
-        total +
-        project.taskBranchSyncs.filter(
-          (task) => task.syncState === SyncState.DONE,
-        ).length
-      );
-    }, 0);
-
-    // Task cards reflect the user's real Notion tasks (assignee = this user),
-    // pulled from the cached NotionTask snapshot. Match on email first, name as
-    // fallback (Notion only exposes assignee email when the integration can read it).
-    // Reuse the project ids already loaded above — a direct `projectId IN (...)`
-    // filter avoids re-running the membership join for every cached task row.
-    // Matching is done in JS (not a Prisma `has` filter) so it can be
-    // case-insensitive and trimmed — a Notion assignee email/name rarely matches
-    // the Orchestra account byte-for-byte. See userMatchesAssignee.
-    const projectIds = projectsRaw.map((p) => p.id);
-    const cachedTasks = projectIds.length
-      ? await this.prisma.notionTask.findMany({
-          where: { projectId: { in: projectIds } },
-          select: {
-            notionPageId: true,
-            projectId: true,
-            title: true,
-            status: true,
-            statusGroup: true,
-            url: true,
-            dueDate: true,
-            assigneeEmails: true,
-            assigneeNames: true,
-          },
-        })
-      : [];
+    // Task cards reflect the user's real Notion tasks (assignee = this user).
+    // Match on email first, name as fallback (Notion only exposes assignee email
+    // when the integration can read it). Matching is done in JS (not a Prisma
+    // `has` filter) so it can be case-insensitive and trimmed — a Notion assignee
+    // email/name rarely matches the Orchestra account byte-for-byte. See
+    // userMatchesAssignee.
     const myNotionTasks = cachedTasks.filter((t) => userMatchesAssignee(t, user));
 
     const completedNotionTasks = myNotionTasks.filter(

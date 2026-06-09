@@ -8,7 +8,7 @@ describe('SummariesService', () => {
   let service: SummariesService;
   let geminiService: { summarize: jest.Mock };
   let transcriptsService: { findByMeeting: jest.Mock };
-  let notionService: { fetchBlockChildren: jest.Mock; createPage: jest.Mock };
+  let notionService: { fetchBlockChildren: jest.Mock; createPage: jest.Mock; convertDraftProperties: jest.Mock };
 
   beforeEach(async () => {
     geminiService = {
@@ -22,6 +22,9 @@ describe('SummariesService', () => {
     notionService = {
       fetchBlockChildren: jest.fn(),
       createPage: jest.fn(),
+      // Pass entry properties through unchanged — the real conversion is unit-tested
+      // in notion.service.spec; here we only assert SummariesService's sync flow.
+      convertDraftProperties: jest.fn((props: any) => props),
     };
 
     const module: TestingModule = await Test.createTestingModule({

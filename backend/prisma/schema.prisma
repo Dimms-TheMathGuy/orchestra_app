@@ -144,6 +144,8 @@ model TaskBranchSync {
   completionPropertyName String
   completionPropertyType String
   completionValue        Json
+  inProgressValue        Json?
+  requireApproval        Boolean           @default(false)
   targetBranch           String            @default("main")
   project                Project           @relation(fields: [projectId], references: [id])
   repo                   ProjectRepository @relation(fields: [repoId], references: [id])
@@ -211,6 +213,8 @@ model ProjectMessage {
   createdAt   DateTime            @default(now())
   deletedAt   DateTime?
   editedAt    DateTime?
+  pinnedAt    DateTime?
+  pinnedById  String?
   replyToId   String?
   attachments MessageAttachment[]
   reads       MessageRead[]

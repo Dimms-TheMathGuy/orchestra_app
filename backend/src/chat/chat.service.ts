@@ -165,7 +165,46 @@ export class ChatService {
       senderName: m.sender?.name,
       content: this.safeDecrypt(m.content, m.iv),
       createdAt: m.createdAt,
+      pinnedAt: m.pinnedAt,
     }))
+  }
+
+  /**
+   * Pin or unpin a message. Any member who can access the channel may toggle a
+   * pin — pins are shared context for the whole channel, not a personal bookmark.
+   * Returns the message's new pinned state.
+   */
+  async togglePin(
+    projectId: string,
+    userId: string,
+    messageId: string,
+    channelId?: string,
+  ) {
+    const channel = await this.resolveChannel(projectId, userId, channelId)
+
+    const message = await this.prisma.projectMessage.findFirst({
+      where: {
+        id: messageId,
+        projectId,
+        // General also owns legacy (channelId null) messages.
+        ...(channel.type === 'GENERAL'
+          ? { OR: [{ channelId: channel.id }, { channelId: null }] }
+          : { channelId: channel.id }),
+      },
+      select: { id: true, pinnedAt: true },
+    })
+    if (!message) throw new NotFoundException('Message not found in this channel')
+
+    const willPin = message.pinnedAt === null
+    await this.prisma.projectMessage.update({
+      where: { id: message.id },
+      data: {
+        pinnedAt: willPin ? new Date() : null,
+        pinnedById: willPin ? userId : null,
+      },
+    })
+
+    return { id: message.id, pinned: willPin }
   }
 
   async sendMessage(

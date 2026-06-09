@@ -366,4 +366,24 @@ export class NotionService {
         await this.updatePageProperties(pageId, properties);
     }
 
+    /**
+     * Push an "in progress" value to the same completion property when work
+     * starts on the linked branch. Uses the identical property builder as
+     * completion — the only difference is the value written.
+     */
+    async markTaskInProgress(
+        pageId: string,
+        propertyName: string,
+        propertyType: string,
+        inProgressValue: unknown,
+    ) {
+        const properties = this.buildCompletionProperties(
+            propertyName,
+            propertyType,
+            inProgressValue,
+        );
+
+        await this.updatePageProperties(pageId, properties);
+    }
+
 }
