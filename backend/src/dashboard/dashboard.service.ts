@@ -1,27 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { SyncState } from '@prisma/client';
+import { userMatchesAssignee } from '../notion/assignee-match.util';
 
 @Injectable()
 export class DashboardService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getDashboard(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        avatarUrl: true,
-      },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
-
-    const projectsRaw = await this.prisma.project.findMany({
+    // Independent reads — declared here, then dispatched together via Promise.all
+    // below so the user lookup and this projects query run concurrently.
+    const projectsPromise = this.prisma.project.findMany({
       where: {
         OR: [{ ownerId: userId }, { members: { some: { userId } } }],
       },
@@ -71,6 +60,20 @@ export class DashboardService {
       },
     });
 
+    // Promise.all dispatches both lazy Prisma queries together (a PrismaPromise
+    // doesn't run until awaited/.then'd), so user + projects load concurrently.
+    const [user, projectsRaw] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, name: true, avatarUrl: true },
+      }),
+      projectsPromise,
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const projects = projectsRaw.map((project) => {
       const tasks = project.taskBranchSyncs;
 
@@ -92,6 +95,7 @@ export class DashboardService {
         name: project.name,
         description: project.description,
         status: project.status,
+        notionDbId: project.notionDbId ?? null,
         progress,
         isMember,
         role: project.ownerId === userId ? 'owner' : currentMember?.role ?? null,
@@ -128,18 +132,29 @@ export class DashboardService {
     // Task cards reflect the user's real Notion tasks (assignee = this user),
     // pulled from the cached NotionTask snapshot. Match on email first, name as
     // fallback (Notion only exposes assignee email when the integration can read it).
-    const myNotionTasks = await this.prisma.notionTask.findMany({
-      where: {
-        project: {
-          OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-        },
-        OR: [
-          { assigneeEmails: { has: user.email } },
-          { assigneeNames: { has: user.name } },
-        ],
-      },
-      select: { statusGroup: true },
-    });
+    // Reuse the project ids already loaded above — a direct `projectId IN (...)`
+    // filter avoids re-running the membership join for every cached task row.
+    // Matching is done in JS (not a Prisma `has` filter) so it can be
+    // case-insensitive and trimmed — a Notion assignee email/name rarely matches
+    // the Orchestra account byte-for-byte. See userMatchesAssignee.
+    const projectIds = projectsRaw.map((p) => p.id);
+    const cachedTasks = projectIds.length
+      ? await this.prisma.notionTask.findMany({
+          where: { projectId: { in: projectIds } },
+          select: {
+            notionPageId: true,
+            projectId: true,
+            title: true,
+            status: true,
+            statusGroup: true,
+            url: true,
+            dueDate: true,
+            assigneeEmails: true,
+            assigneeNames: true,
+          },
+        })
+      : [];
+    const myNotionTasks = cachedTasks.filter((t) => userMatchesAssignee(t, user));
 
     const completedNotionTasks = myNotionTasks.filter(
       (t) => t.statusGroup === 'done',
@@ -203,6 +218,15 @@ export class DashboardService {
         active: activeNotionTasks,
         completed: completedNotionTasks,
         inProgress: inProgressNotionTasks,
+        list: myNotionTasks.map((t) => ({
+          notionPageId: t.notionPageId,
+          projectId: t.projectId,
+          title: t.title,
+          status: t.status,
+          statusGroup: t.statusGroup,
+          url: t.url,
+          dueDate: t.dueDate,
+        })),
       },
     };
   }

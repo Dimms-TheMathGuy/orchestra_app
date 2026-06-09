@@ -3,6 +3,7 @@ import { Inter, Lato, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider } from "./context/AuthContext";
+import { LocaleProvider } from "./context/LocaleContext";
 import { Toaster } from "sonner";
 
 // Inter is the global/default font for the whole app
@@ -45,10 +46,12 @@ export default function RootLayout({
         `}
       >
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-            <Toaster position="top-right" />
-          </AuthProvider>
+          <LocaleProvider>
+            <AuthProvider>
+              {children}
+              <Toaster position="top-right" />
+            </AuthProvider>
+          </LocaleProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -6,10 +6,11 @@ import {
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
 import { PrismaService } from '../prisma/prisma.service';
+import { JwtService } from '@nestjs/jwt';
 
 @Controller('passkey')
 export class PasskeyController {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private jwtService: JwtService) {}
 
   rpName = 'Orchestra';
   rpID = 'localhost';
@@ -120,15 +121,15 @@ export class PasskeyController {
 
  @Post('auth/options')
   async authOptions(@Body() body: any) {
-    console.log('BODY AUTH OPTIONS:', body);
-
-    const userId = body?.userId;
+    // Accept either userId or email so the login page can pass email directly
+    let userId: string = body?.userId;
+    if (!userId && body?.email) {
+      const user = await this.prisma.user.findUnique({ where: { email: body.email }, select: { id: true } });
+      userId = user?.id ?? '';
+    }
 
     if (!userId) {
-      return {
-        error: 'userId is required',
-        bodyReceived: body,
-      };
+      return { error: 'userId or email is required' };
     }
 
     const passkeys = await this.prisma.passkey.findMany({
@@ -162,32 +163,27 @@ export class PasskeyController {
 
   @Post('auth/verify')
   async authVerify(@Body() body: any) {
-    console.log('BODY AUTH VERIFY:', body);
-
-    const userId = body?.userId;
+    let userId: string = body?.userId;
     const response = body?.response;
 
-    if (!userId || !response) {
-      return {
-        verified: false,
-        error: 'userId and response are required',
-        bodyReceived: body,
-      };
+    // Allow callers to pass email instead of userId
+    if (!userId && body?.email) {
+      const found = await this.prisma.user.findUnique({ where: { email: body.email }, select: { id: true } });
+      userId = found?.id ?? '';
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
+    if (!userId || !response) {
+      return { verified: false, error: 'userId (or email) and response are required' };
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     if (!user || !user.currentChallenge) {
       return { verified: false, error: 'Challenge not found' };
     }
 
     const passkey = await this.prisma.passkey.findFirst({
-      where: {
-        userId: user.id,
-        credentialId: response.id,
-      },
+      where: { userId: user.id, credentialId: response.id },
     });
 
     if (!passkey) {
@@ -203,9 +199,7 @@ export class PasskeyController {
         id: passkey.credentialId,
         publicKey: Buffer.from(passkey.publicKey, 'base64'),
         counter: passkey.counter,
-        transports: passkey.transports
-          ? (passkey.transports.split(',') as any)
-          : undefined,
+        transports: passkey.transports ? (passkey.transports.split(',') as any) : undefined,
       },
     });
 
@@ -215,18 +209,20 @@ export class PasskeyController {
 
     await this.prisma.passkey.update({
       where: { id: passkey.id },
-      data: {
-        counter: verification.authenticationInfo.newCounter,
-      },
+      data: { counter: verification.authenticationInfo.newCounter },
     });
 
     await this.prisma.user.update({
       where: { id: user.id },
-      data: {
-        currentChallenge: null,
-      },
+      data: { currentChallenge: null },
     });
 
-    return { verified: true };
+    const token = await this.jwtService.signAsync({ sub: user.id, email: user.email });
+
+    return {
+      verified: true,
+      access_token: token,
+      user: { id: user.id, email: user.email, name: user.name },
+    };
   }
 }

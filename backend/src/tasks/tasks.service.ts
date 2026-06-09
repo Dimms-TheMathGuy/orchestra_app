@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotionService } from '../notion/notion.service';
+import { userMatchesAssignee } from '../notion/assignee-match.util';
 
 @Injectable()
 export class TasksService {
@@ -39,7 +40,7 @@ export class TasksService {
 
     // Query every resolved database; each task remembers which db it came from
     // (needed so the completion payload targets the right schema).
-    const fetched: {
+    type FetchedTask = {
       notionPageId: string;
       notionDatabaseId: string;
       title: string;
@@ -48,12 +49,18 @@ export class TasksService {
       assigneeEmails: string[];
       assigneeNames: string[];
       url: string | null;
-    }[] = [];
+      dueDate: string | null;
+    };
 
-    for (const dbId of databaseIds) {
-      const rows = await this.notion.queryDatabaseTasks(dbId);
-      for (const r of rows) fetched.push({ ...r, notionDatabaseId: dbId });
-    }
+    // Hit all resolved databases concurrently rather than one Notion round-trip
+    // at a time — the page commonly holds several child databases.
+    const perDb = await Promise.all(
+      databaseIds.map(async (dbId): Promise<FetchedTask[]> => {
+        const rows = await this.notion.queryDatabaseTasks(dbId);
+        return rows.map((r) => ({ ...r, notionDatabaseId: dbId }));
+      }),
+    );
+    const fetched: FetchedTask[] = perDb.flat();
 
     await this.prisma.$transaction([
       // Drop tasks that vanished from Notion (or moved databases)
@@ -76,6 +83,7 @@ export class TasksService {
             assigneeEmails: t.assigneeEmails,
             assigneeNames: t.assigneeNames,
             url: t.url,
+            dueDate: t.dueDate ? new Date(t.dueDate) : null,
           },
           update: {
             notionDatabaseId: t.notionDatabaseId,
@@ -85,6 +93,7 @@ export class TasksService {
             assigneeEmails: t.assigneeEmails,
             assigneeNames: t.assigneeNames,
             url: t.url,
+            dueDate: t.dueDate ? new Date(t.dueDate) : null,
             lastSyncedAt: new Date(),
           },
         }),
@@ -135,13 +144,29 @@ export class TasksService {
     return { total: projects.length, ok, fail };
   }
 
-  /** Cached Notion tasks for a project (used by the link-task-to-branch form). */
+  /**
+   * Cached Notion tasks for a project, scoped to the tasks assigned to the
+   * requesting user (used by the link-task-to-branch form). A user should only
+   * be able to link a branch to their own Notion task, so we filter by assignee
+   * (email first, display name as fallback) just like the dashboard widget.
+   */
   async getProjectTasks(projectId: string, userId: string) {
     await this.ensureAccess(projectId, userId);
-    return this.prisma.notionTask.findMany({
-      where: { projectId },
-      orderBy: [{ statusGroup: 'asc' }, { title: 'asc' }],
-    });
+
+    const [user, tasks] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { email: true, name: true },
+      }),
+      this.prisma.notionTask.findMany({
+        where: { projectId },
+        orderBy: [{ statusGroup: 'asc' }, { title: 'asc' }],
+      }),
+    ]);
+
+    if (!user) return [];
+
+    return tasks.filter((task) => userMatchesAssignee(task, user));
   }
 
   /**

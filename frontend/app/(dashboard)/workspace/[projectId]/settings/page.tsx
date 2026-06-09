@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   Settings, ChevronRight, Save, UserPlus, Trash2, Crown, FileText, Github,
-  Video, CheckCircle2, AlertTriangle, RefreshCw, Archive,
+  Video, CheckCircle2, AlertTriangle, RefreshCw, Archive, Unlink,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { get, patch, post } from '@/app/lib/api'
@@ -49,6 +49,7 @@ export default function ProjectSettings() {
   const [saving, setSaving] = useState(false)
   const [memberEmail, setMemberEmail] = useState('')
   const [addingMember, setAddingMember] = useState(false)
+  const [disconnectingRepo, setDisconnectingRepo] = useState<string | null>(null)
 
   useEffect(() => {
     if (projectId) loadProject()
@@ -140,6 +141,23 @@ export default function ProjectSettings() {
     }
   }
 
+  const handleDisconnectRepo = async (repoId: string, repoName: string) => {
+    if (!confirm(`Disconnect ${repoName} from this project? All task-branch links will be removed.`)) return
+    setDisconnectingRepo(repoId)
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/api/github/${projectId}/repository/${repoId}`,
+        { method: 'DELETE', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } },
+      )
+      toast.success(`${repoName} disconnected`)
+      loadProject()
+    } catch {
+      toast.error('Failed to disconnect repository')
+    } finally {
+      setDisconnectingRepo(null)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -152,7 +170,6 @@ export default function ProjectSettings() {
 
   const integrations = [
     { icon: FileText, label: 'Notion', connected: Boolean(project.notionDbId), detail: project.notionDbId ? 'Database connected' : 'Not connected' },
-    { icon: Github, label: 'GitHub', connected: (project.repositories?.length ?? 0) > 0, detail: project.repositories?.length ? `${project.repositories.length} repo(s)` : 'Not connected' },
     { icon: Video, label: 'Zoom', connected: true, detail: 'Available in workspace' },
   ]
 
@@ -276,6 +293,48 @@ export default function ProjectSettings() {
           <section className="rounded-2xl border border-border bg-card p-8 shadow-sm">
             <h3 className="mb-6 text-lg font-bold">Integrations</h3>
             <div className="space-y-3">
+              {/* GitHub repos — each row has a disconnect button */}
+              <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card">
+                    <Github size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold">GitHub</p>
+                    <p className="text-xs text-muted-foreground">
+                      {project.repositories?.length ? `${project.repositories.length} repo(s) connected` : 'Not connected'}
+                    </p>
+                  </div>
+                </div>
+                {(project.repositories?.length ?? 0) > 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-[10px] font-bold text-green-600">
+                    <CheckCircle2 size={12} /> Connected
+                  </span>
+                ) : (
+                  <span className="rounded bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground">Off</span>
+                )}
+              </div>
+
+              {/* Per-repo rows with disconnect */}
+              {isOwner && project.repositories?.map((repo) => (
+                <div key={repo.id} className="ml-4 flex items-center justify-between rounded-xl border border-border bg-background p-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Github size={14} className="shrink-0 text-muted-foreground" />
+                    <span className="truncate text-sm font-medium">{repo.githubOwner}/{repo.githubRepo}</span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={disconnectingRepo === repo.id}
+                    onClick={() => handleDisconnectRepo(repo.id, `${repo.githubOwner}/${repo.githubRepo}`)}
+                    className="shrink-0 gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Unlink size={13} />
+                    {disconnectingRepo === repo.id ? '...' : 'Disconnect'}
+                  </Button>
+                </div>
+              ))}
+
               {integrations.map((it) => {
                 const Icon = it.icon
                 return (

@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { get, post } from '@/app/lib/api'
 import { useAuth } from '@/app/context/AuthContext'
+import { useLocale } from '@/app/context/LocaleContext'
 
 interface ChatMessage {
   id: string
@@ -39,16 +40,6 @@ function initialsOf(name?: string) {
   return (name || '?').split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function dayLabel(dateStr: string) {
-  const d = new Date(dateStr)
-  const today = new Date()
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
-  if (d.toDateString() === today.toDateString()) return 'Today'
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday'
-  return d.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })
-}
-
 const ACCENTS = ['#6d28d9', '#2563eb', '#0891b2', '#db2777', '#ea580c', '#16a34a']
 function accentFor(id: string) {
   let h = 0
@@ -66,6 +57,7 @@ export default function ProjectChat() {
   const params = useParams()
   const projectId = params?.projectId as string
   const { user } = useAuth()
+  const { t, locale } = useLocale()
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [project, setProject] = useState<Project | null>(null)
   const [channels, setChannels] = useState<Channel[]>([])
@@ -76,6 +68,16 @@ export default function ProjectChat() {
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  const dayLabel = (dateStr: string) => {
+    const d = new Date(dateStr)
+    const today = new Date()
+    const yesterday = new Date()
+    yesterday.setDate(today.getDate() - 1)
+    if (d.toDateString() === today.toDateString()) return t.chat.today
+    if (d.toDateString() === yesterday.toDateString()) return t.chat.yesterday
+    return d.toLocaleDateString(locale === 'id' ? 'id-ID' : 'en-US', { weekday: 'long', month: 'short', day: 'numeric' })
+  }
 
   // Initial load: project + channels
   useEffect(() => {
@@ -88,7 +90,7 @@ export default function ProjectChat() {
         setChannels(list)
         if (list.length > 0) setActiveChannelId(list[0].id)
       })
-      .catch(() => toast.error('Failed to load channels'))
+      .catch(() => toast.error(t.chat.failedLoadChannels))
       .finally(() => setLoading(false))
   }, [projectId])
 
@@ -98,7 +100,7 @@ export default function ProjectChat() {
     setLoadingMessages(true)
     get(`/projects/${projectId}/channels/${activeChannelId}/messages`)
       .then((data: ChatMessage[]) => setMessages(Array.isArray(data) ? data : []))
-      .catch((e) => toast.error(e instanceof Error ? e.message : 'Failed to load chat'))
+      .catch((e) => toast.error(e instanceof Error ? e.message : t.chat.failedLoadChat))
       .finally(() => setLoadingMessages(false))
   }, [projectId, activeChannelId])
 
@@ -120,7 +122,7 @@ export default function ProjectChat() {
       setContent('')
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send message')
+      toast.error(error instanceof Error ? error.message : t.chat.failedSend)
     } finally {
       setSending(false)
     }
@@ -153,7 +155,7 @@ export default function ProjectChat() {
       lastSender = m.senderId
     }
     return result
-  }, [messages])
+  }, [messages, locale])
 
   // Split channels into sections for the sidebar
   const generalChannels = channels.filter((c) => c.type === 'GENERAL')
@@ -186,12 +188,12 @@ export default function ProjectChat() {
           <nav className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
             <Link href={`/workspace/${projectId}`} className="hover:text-primary">{project?.name || 'Workspace'}</Link>
           </nav>
-          <h2 className="text-base font-extrabold tracking-tight">Channels</h2>
+          <h2 className="text-base font-extrabold tracking-tight">{t.chat.channels}</h2>
         </div>
 
         <div className="flex-1 overflow-y-auto px-2 py-3">
           {loading ? (
-            <p className="px-2 text-xs text-muted-foreground">Loading…</p>
+            <p className="px-2 text-xs text-muted-foreground">{t.chat.loading}</p>
           ) : (
             <div className="space-y-4">
               {generalChannels.length > 0 && (
@@ -203,7 +205,7 @@ export default function ProjectChat() {
               {managementChannels.length > 0 && (
                 <div>
                   <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Management
+                    {t.chat.management}
                   </p>
                   <div className="space-y-0.5">
                     {managementChannels.map((c) => <ChannelButton key={c.id} c={c} />)}
@@ -214,7 +216,7 @@ export default function ProjectChat() {
               {teamChannels.length > 0 && (
                 <div>
                   <p className="mb-1 px-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                    Teams
+                    {t.chat.teams}
                   </p>
                   <div className="space-y-0.5">
                     {teamChannels.map((c) => <ChannelButton key={c.id} c={c} />)}
@@ -234,7 +236,7 @@ export default function ProjectChat() {
             <nav className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
               <Link href={`/workspace/${projectId}`} className="hover:text-primary">{project?.name || 'Workspace'}</Link>
               <ChevronRight size={11} />
-              <span>Chat</span>
+              <span>{t.sidebar.chat}</span>
             </nav>
             <h1 className="flex items-center gap-2 text-xl font-extrabold tracking-tight">
               {activeChannel ? (
@@ -243,7 +245,7 @@ export default function ProjectChat() {
                   {activeChannel.name}
                 </>
               ) : (
-                <><Hash size={18} className="text-primary" /> Chat</>
+                <><Hash size={18} className="text-primary" /> {t.sidebar.chat}</>
               )}
             </h1>
           </div>
@@ -252,7 +254,7 @@ export default function ProjectChat() {
           {activeChannel && activeChannel.type !== 'GENERAL' && (
             <span className="flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-[11px] font-medium text-muted-foreground">
               <Lock size={11} />
-              {activeChannel.type === 'MANAGEMENT' ? 'Board only' : 'Team + Board'}
+              {activeChannel.type === 'MANAGEMENT' ? t.chat.boardOnly : t.chat.teamAndBoard}
             </span>
           )}
         </header>
@@ -261,15 +263,15 @@ export default function ProjectChat() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           <div className="mx-auto max-w-3xl">
             {loadingMessages ? (
-              <div className="py-20 text-center text-sm text-muted-foreground">Loading chat...</div>
+              <div className="py-20 text-center text-sm text-muted-foreground">{t.chat.loadingChat}</div>
             ) : messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-24 text-center">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <MessageSquare size={28} />
                 </div>
-                <p className="font-semibold">No messages yet</p>
+                <p className="font-semibold">{t.chat.noMessages}</p>
                 <p className="mt-1 max-w-xs text-sm text-muted-foreground">
-                  Start the conversation in <span className="font-semibold">{activeChannel?.name}</span>. Messages are end-to-end encrypted.
+                  {t.chat.startConversation} <span className="font-semibold">{activeChannel?.name}</span>. {t.chat.encrypted}
                 </p>
               </div>
             ) : (
@@ -302,7 +304,7 @@ export default function ProjectChat() {
                           <div className={`flex max-w-[75%] flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
                             {showHeader && (
                               <div className={`mb-1 flex items-center gap-2 ${isOwn ? 'flex-row-reverse' : ''}`}>
-                                <span className="text-xs font-bold">{isOwn ? 'You' : m.senderName || 'Member'}</span>
+                                <span className="text-xs font-bold">{isOwn ? t.chat.you : m.senderName || t.chat.member}</span>
                                 <span className="text-[10px] text-muted-foreground">
                                   {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
@@ -341,7 +343,7 @@ export default function ProjectChat() {
                 e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`
               }}
               onKeyDown={handleKeyDown}
-              placeholder={activeChannel ? `Message ${activeChannel.name}…  (Enter to send, Shift+Enter for new line)` : 'Write a message...'}
+              placeholder={activeChannel ? `${t.chat.writeMessage.replace('...', '')}${activeChannel.name}…  ${t.chat.messageHint}` : t.chat.writeMessage}
               rows={1}
               disabled={!activeChannelId}
               className="max-h-40 flex-1 resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-50"

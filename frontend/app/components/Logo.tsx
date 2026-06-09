@@ -8,8 +8,7 @@ export function Logo({
   height?: number
   className?: string
 }) {
-  // Source asset — ratio ~2.1 (wide letterbox with mark + wordmark)
-  const width = Math.round(height * 2.1)
+  const width = Math.round(height * 2.8)
   return (
     <Image
       src="/Logo.png"

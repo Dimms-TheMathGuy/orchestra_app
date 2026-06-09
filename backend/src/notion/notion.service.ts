@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client, GetDatabaseResponse } from '@notionhq/client';
+import axios from 'axios';
 
 export type GeminiPropertySummary = {
     name: string;
@@ -50,24 +51,19 @@ export class NotionService {
 
         try {
             for (const id of databaseIds) {
-                const res = await fetch(`https://api.notion.com/v1/databases/${id}`, {
+                const res = await axios.get(`https://api.notion.com/v1/databases/${id}`, {
                     headers: {
                         Authorization: `Bearer ${apiKey}`,
                         'Notion-Version': '2022-06-28',
                     },
                 });
 
-                if (!res.ok) {
-                    throw new Error(`Notion API error ${res.status}`);
-                }
-
-                const rawSchema = await res.json();
-                const compactSchema = this.normalizeSchema(rawSchema);
+                const compactSchema = this.normalizeSchema(res.data);
 
                 if (this.estimateSize(compactSchema) > 10000) {
                     throw new Error('Schema is too large for Gemini: upgrade to premium to connect large notion templates')
                 }
-                
+
                 schemas.push(compactSchema);
             }
         } catch (error) {
@@ -171,13 +167,17 @@ export class NotionService {
         const apiKey = this.configService.get<string>('NOTION_API_KEY');
 
         // First: is it a database on its own?
-        const res = await fetch(`https://api.notion.com/v1/databases/${idOrPageId}`, {
-            headers: {
-                Authorization: `Bearer ${apiKey}`,
-                'Notion-Version': '2022-06-28',
-            },
-        });
-        if (res.ok) return [idOrPageId];
+        try {
+            await axios.get(`https://api.notion.com/v1/databases/${idOrPageId}`, {
+                headers: {
+                    Authorization: `Bearer ${apiKey}`,
+                    'Notion-Version': '2022-06-28',
+                },
+            });
+            return [idOrPageId];
+        } catch {
+            // Not a database — fall through and treat as a page/block
+        }
 
         // Otherwise treat it as a page/block and collect its child databases
         try {
@@ -214,6 +214,7 @@ export class NotionService {
             assigneeEmails: string[];
             assigneeNames: string[];
             url: string | null;
+            dueDate: string | null;
         }[] = [];
 
         const apiKey = this.configService.get<string>('NOTION_API_KEY');
@@ -221,30 +222,18 @@ export class NotionService {
         try {
             let cursor: string | undefined = undefined;
             do {
-                // Notion SDK v5 dropped databases.query (moved to data sources), so we
-                // call the classic REST endpoint directly with a pinned API version —
-                // same approach as fetchAllDatabaseSchema.
-                const response = await fetch(
+                const response = await axios.post(
                     `https://api.notion.com/v1/databases/${databaseId}/query`,
+                    { start_cursor: cursor, page_size: 100 },
                     {
-                        method: 'POST',
                         headers: {
                             Authorization: `Bearer ${apiKey}`,
                             'Notion-Version': '2022-06-28',
-                            'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ start_cursor: cursor, page_size: 100 }),
                     },
                 );
 
-                if (!response.ok) {
-                    const errBody = await response.json().catch(() => null);
-                    throw new Error(
-                        `Notion API error ${response.status}: ${errBody?.message ?? 'unknown'}`,
-                    );
-                }
-
-                const res: any = await response.json();
+                const res: any = response.data;
 
                 for (const page of res.results) {
                     if (!('properties' in page)) continue;
@@ -252,6 +241,7 @@ export class NotionService {
 
                     let title = '';
                     let status: string | null = null;
+                    let dueDate: string | null = null;
                     const assigneeEmails: string[] = [];
                     const assigneeNames: string[] = [];
 
@@ -268,6 +258,10 @@ export class NotionService {
                             case 'select':
                                 // Use a select only if we haven't found a real status property
                                 if (status === null) status = value.select?.name ?? null;
+                                break;
+                            case 'date':
+                                // First date property is treated as the task's deadline
+                                if (dueDate === null) dueDate = value.date?.start ?? null;
                                 break;
                             case 'people':
                                 for (const person of value.people ?? []) {
@@ -287,6 +281,7 @@ export class NotionService {
                         assigneeEmails,
                         assigneeNames,
                         url: page.url ?? null,
+                        dueDate,
                     });
                 }
 

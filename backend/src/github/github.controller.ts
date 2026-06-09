@@ -72,6 +72,16 @@ export class GithubController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Delete(':projectId/repository/:repoId')
+  disconnectRepo(
+    @Param('projectId') projectId: string,
+    @Param('repoId') repoId: string,
+    @Req() req: any,
+  ) {
+    return this.githubService.disconnectRepository(projectId, repoId, req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Delete(':projectId/task-branch-sync/:syncId')
   unlinkTask(
     @Param('projectId') projectId: string,

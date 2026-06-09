@@ -13,6 +13,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { toast } from 'sonner'
 import { useAuth } from '@/app/context/AuthContext'
+import { useLocale } from '@/app/context/LocaleContext'
 
 interface ProjectRepository {
   id: string
@@ -182,6 +183,7 @@ export default function Workspace() {
   const params = useParams()
   const router = useRouter()
   const { user } = useAuth()
+  const { t } = useLocale()
   const projectId = params?.projectId as string
 
   const [project, setProject] = useState<Project | null>(null)
@@ -239,13 +241,26 @@ export default function Workspace() {
     if (projectId) setNotionEmbedUrl(localStorage.getItem(`notion-embed-${projectId}`) || '')
   }, [projectId])
 
+  // The GitHub repo picker only appears when no repo is linked yet. Listing the
+  // user's repos hits the GitHub API (slow), so fetch it lazily and only when
+  // the picker will actually be shown — never block the initial render on it.
+  useEffect(() => {
+    if (!project) return
+    if ((project.repositories?.length ?? 0) > 0) return // picker hidden → skip
+    let cancelled = false
+    get('/api/github/repos')
+      .then((r) => { if (!cancelled) setRepos(Array.isArray(r) ? r : []) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [project])
+
   // Debounced user search for add-member
   useEffect(() => {
     if (!memberSearch.trim() || memberSearch.length < 2) {
       setMemberSearchResults([])
       return
     }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setSearchingUsers(true)
       try {
         const results = await get(`/users?email=${encodeURIComponent(memberSearch.trim())}`)
@@ -258,36 +273,36 @@ export default function Workspace() {
         setSearchingUsers(false)
       }
     }, 350)
-    return () => clearTimeout(t)
+    return () => clearTimeout(timer)
   }, [memberSearch])
 
   const fetchProjectData = async () => {
     try {
-      const [projectData, activitiesData, meetingsData, messagesData, rolesData, requestsData] = await Promise.all([
+      // Only fast local-DB endpoints are awaited here so the page paints quickly.
+      const [projectData, activitiesData, messagesData, rolesData, requestsData] = await Promise.all([
         get(`/projects/${projectId}`),
         get(`/api/github/projects/${projectId}/github-activity`).catch(() => []),
-        get(`/zoom/projects/${projectId}/meetings`).catch(() => []),
         get(`/projects/${projectId}/messages`).catch(() => []),
         get(`/projects/${projectId}/roles`).catch(() => []),
         get(`/projects/${projectId}/roles/requests`).catch(() => []), // owner-only; 403 → []
       ])
-      setProjectRoles(Array.isArray(rolesData) ? rolesData : [])
-      setRoleRequests(Array.isArray(requestsData) ? requestsData : [])
-      try {
-        setRepos(await get('/api/github/repos'))
-      } catch (e) {
-        console.error(e)
-      }
       setProject(projectData)
       setActivities(activitiesData || [])
-      setMeetings(meetingsData || [])
       setMessages(Array.isArray(messagesData) ? messagesData : [])
+      setProjectRoles(Array.isArray(rolesData) ? rolesData : [])
+      setRoleRequests(Array.isArray(requestsData) ? requestsData : [])
     } catch (error) {
-      toast.error('Failed to load project data')
+      toast.error(t.workspace.failedLoad)
       console.error(error)
     } finally {
       setLoading(false)
     }
+
+    // Zoom meetings hit the external Zoom API (slow) — load out-of-band so the
+    // workspace renders immediately and the list fills in when Zoom responds.
+    get(`/zoom/projects/${projectId}/meetings`)
+      .then((m) => setMeetings(Array.isArray(m) ? m : []))
+      .catch(() => {})
   }
 
   const handleGithubSync = async () => {
@@ -296,9 +311,9 @@ export default function Workspace() {
       await post(`/api/github/projects/${projectId}/sync`, {})
       const data = await get(`/api/github/projects/${projectId}/github-activity`)
       setActivities(data || [])
-      toast.success('GitHub activity synced')
+      toast.success(t.workspace.githubSynced)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to sync GitHub activity')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedSyncGithub)
     } finally {
       setSyncingGithub(false)
     }
@@ -311,7 +326,7 @@ export default function Workspace() {
       const data = await get(`/api/github/${projectId}/branches`)
       setBranches(Array.isArray(data) ? data : [])
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load branches')
+      toast.error(e instanceof Error ? e.message : t.workspace.failedLoadBranches)
     } finally {
       setLoadingBranches(false)
     }
@@ -331,9 +346,9 @@ export default function Workspace() {
     try {
       const data = await post(`/projects/${projectId}/notion/sync-tasks`, {})
       setNotionTasks(Array.isArray(data) ? data : [])
-      toast.success(`Synced ${Array.isArray(data) ? data.length : 0} Notion tasks`)
+      toast.success(t.workspace.syncedTasks(Array.isArray(data) ? data.length : 0))
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to sync Notion tasks')
+      toast.error(e instanceof Error ? e.message : t.workspace.failedSyncTasks)
     } finally {
       setSyncingTasks(false)
     }
@@ -362,13 +377,13 @@ export default function Workspace() {
     setLinkCompletionValue('')
     setProjectSchema(null)
     if (!taskId) return
-    const task = notionTasks.find((t) => t.notionPageId === taskId)
+    const task = notionTasks.find((nt) => nt.notionPageId === taskId)
     if (!task) return
     try {
       const schema = await get(`/projects/${projectId}/notion/schema/${task.notionDatabaseId}`)
       setProjectSchema(schema)
     } catch {
-      toast.error('Failed to load task database schema')
+      toast.error(t.workspace.failedLoadSchema)
     }
   }
 
@@ -380,18 +395,18 @@ export default function Workspace() {
 
   const handleSubmitLink = async () => {
     if (!linkBranch || !linkTaskId || !linkCompletionProp || !selectedProp) {
-      toast.error('Pick a task and a completion property')
+      toast.error(t.workspace.pickTaskAndProp)
       return
     }
-    const task = notionTasks.find((t) => t.notionPageId === linkTaskId)
+    const task = notionTasks.find((nt) => nt.notionPageId === linkTaskId)
     if (!task) {
-      toast.error('Selected task not found')
+      toast.error(t.workspace.taskNotFound)
       return
     }
     const completionValue =
       selectedProp.type === 'checkbox' ? linkCompletionValue === 'true' : linkCompletionValue
     if (selectedProp.type !== 'checkbox' && !linkCompletionValue) {
-      toast.error('Pick the value that marks the task complete')
+      toast.error(t.workspace.pickCompletionValue)
       return
     }
 
@@ -407,11 +422,11 @@ export default function Workspace() {
         completionPropertyType: selectedProp.type,
         completionValue,
       })
-      toast.success(`Linked "${task.title}" to ${linkBranch.name}`)
+      toast.success(t.workspace.linked(task.title, linkBranch.name))
       setLinkBranch(null)
       loadBranches()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to link task')
+      toast.error(e instanceof Error ? e.message : t.workspace.failedLinkTask)
     } finally {
       setSubmittingLink(false)
     }
@@ -421,10 +436,10 @@ export default function Workspace() {
     if (!branch.linkId) return
     try {
       await del(`/api/github/${projectId}/task-branch-sync/${branch.linkId}`)
-      toast.success(`Unlinked ${branch.name}`)
+      toast.success(t.workspace.unlinked(branch.name))
       loadBranches()
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to unlink')
+      toast.error(e instanceof Error ? e.message : t.workspace.failedUnlink)
     }
   }
 
@@ -449,10 +464,10 @@ export default function Workspace() {
         allowedTeams: [],
       })
       setMeetings((prev) => [meeting, ...prev])
-      toast.success('Zoom meeting created — opening...')
+      toast.success(t.workspace.zoomCreated)
       router.push(`/workspace/${projectId}/zoom/${meeting.id}`)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create Zoom meeting')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedCreateMeeting)
     } finally {
       setCreatingMeeting(false)
     }
@@ -460,11 +475,11 @@ export default function Workspace() {
 
   const handleScheduleMeeting = async () => {
     if (!project) return
-    if (!scheduleDate) { toast.error('Pick a date and time'); return }
+    if (!scheduleDate) { toast.error(t.workspace.pickDate); return }
     // Team-scoped meeting requires the organizer to belong to a team
     const organizerTeam = scheduleScope === 'team' ? myTeam : null
     if (scheduleScope === 'team' && !organizerTeam) {
-      toast.error('You have no team — only project-wide meetings are available')
+      toast.error(t.workspace.noTeam)
       return
     }
     setCreatingMeeting(true)
@@ -484,9 +499,9 @@ export default function Workspace() {
       setScheduleDuration(60)
       setScheduleScope('project')
       setScheduleInvitedTeams([])
-      toast.success('Meeting scheduled')
+      toast.success(t.workspace.meetingScheduled)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to schedule meeting')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedScheduleMeeting)
     } finally {
       setCreatingMeeting(false)
     }
@@ -496,61 +511,61 @@ export default function Workspace() {
     try {
       const repo = repos.find((r) => r.full_name === selectedRepo)
       if (!repo) {
-        toast.error('Select repository')
+        toast.error(t.workspace.selectRepo)
         return
       }
       await post(`/api/github/${projectId}/repository`, repo)
-      toast.success('Repository connected')
+      toast.success(t.workspace.repoConnected)
       fetchProjectData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to connect repository')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedConnectRepo)
     }
   }
 
   const handleConnectNotion = async () => {
     try {
       await post(`/projects/${projectId}/notion`, { databaseId: notionDbId })
-      toast.success('Notion connected')
+      toast.success(t.workspace.notionConnected)
       setNotionDbId('')
       fetchProjectData()
     } catch {
-      toast.error('Failed to connect Notion')
+      toast.error(t.workspace.failedConnectNotion)
     }
   }
 
   const handleSaveEmbed = () => {
     const raw = embedDraft.trim()
     if (raw && !raw.startsWith('http') && !raw.includes('src=')) {
-      toast.error('Paste the Notion embed code (<iframe …>) or a public URL')
+      toast.error(t.workspace.notionEmbedError)
       return
     }
     setNotionEmbedUrl(raw)
     localStorage.setItem(`notion-embed-${projectId}`, raw)
     setEditingEmbed(false)
-    toast.success(raw ? 'Notion page embedded' : 'Embed cleared')
+    toast.success(raw ? t.workspace.notionEmbedSaved : t.workspace.notionEmbedCleared)
   }
 
   const handleCompleteProject = async () => {
     try {
       await patch(`/projects/${projectId}/status`, { status: 'completed' })
-      toast.success('Project marked complete')
+      toast.success(t.workspace.markedComplete)
       fetchProjectData()
     } catch {
-      toast.error('Failed to complete project')
+      toast.error(t.workspace.failedComplete)
     }
   }
 
   const handleDeleteProject = async () => {
-    if (!confirm('Delete this project? This cannot be undone.')) return
+    if (!confirm(t.workspace.deleteConfirm)) return
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/projects/${projectId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       })
-      toast.success('Project deleted')
+      toast.success(t.workspace.deleted)
       router.push('/dashboard')
     } catch {
-      toast.error('Failed to delete project')
+      toast.error(t.workspace.failedDelete)
     }
   }
 
@@ -559,29 +574,29 @@ export default function Workspace() {
     setAddingMember(true)
     try {
       await post(`/projects/${projectId}/members`, { email: selectedUserToAdd.email })
-      toast.success(`${selectedUserToAdd.name} added to project`)
+      toast.success(t.workspace.added(selectedUserToAdd.name))
       setSelectedUserToAdd(null)
       setMemberSearch('')
       setMemberSearchResults([])
       fetchProjectData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to add member')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedAddMember)
     } finally {
       setAddingMember(false)
     }
   }
 
   const handleRemoveMember = async (memberUserId: string, memberName: string) => {
-    if (!confirm(`Remove ${memberName} from project?`)) return
+    if (!confirm(t.workspace.removeConfirm(memberName))) return
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/projects/${projectId}/members/${memberUserId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       })
-      toast.success(`${memberName} removed`)
+      toast.success(t.workspace.removed(memberName))
       fetchProjectData()
     } catch {
-      toast.error('Failed to remove member')
+      toast.error(t.workspace.failedRemoveMember)
     }
   }
 
@@ -589,11 +604,11 @@ export default function Workspace() {
     setSubmittingRoleId(roleId)
     try {
       await patch(`/projects/${projectId}/roles/members/${memberUserId}/assign`, { roleId })
-      toast.success('Role assigned')
+      toast.success(t.workspace.roleAssigned)
       setClaimingForMember(null)
       fetchProjectData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to assign role')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedAssignRole)
     } finally {
       setSubmittingRoleId(null)
     }
@@ -603,10 +618,10 @@ export default function Workspace() {
     setSubmittingRoleId(roleId)
     try {
       await post(`/projects/${projectId}/roles/request`, { roleId })
-      toast.success('Role request submitted — waiting for PM approval')
+      toast.success(t.workspace.requestSubmitted)
       setClaimingForMember(null)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to submit request')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedSubmitRequest)
     } finally {
       setSubmittingRoleId(null)
     }
@@ -616,10 +631,10 @@ export default function Workspace() {
     setReviewingRequest(requestId)
     try {
       await patch(`/projects/${projectId}/roles/requests/${requestId}/review`, { action })
-      toast.success(action === 'approve' ? 'Role approved' : 'Request rejected')
+      toast.success(action === 'approve' ? t.workspace.roleApproved : t.workspace.requestRejected)
       fetchProjectData()
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to review request')
+      toast.error(error instanceof Error ? error.message : t.workspace.failedReviewRequest)
     } finally {
       setReviewingRequest(null)
     }
@@ -630,13 +645,13 @@ export default function Workspace() {
       <div className="flex h-full items-center justify-center p-8">
         <div className="text-center">
           <RefreshCw className="mx-auto h-10 w-10 animate-spin text-primary" />
-          <p className="mt-4 text-muted-foreground">Loading workspace...</p>
+          <p className="mt-4 text-muted-foreground">{t.workspace.loading}</p>
         </div>
       </div>
     )
   }
 
-  if (!project) return <div className="p-8">Project not found</div>
+  if (!project) return <div className="p-8">{t.workspace.notFound}</div>
 
   const myMembership = project.members?.find((m) => m.user.email === user?.email)
   const isOwner = myMembership?.role === 'OWNER'
@@ -681,11 +696,11 @@ export default function Workspace() {
           <div className="flex items-center gap-2">
             {project.status !== 'completed' && (
               <Button variant="outline" size="sm" onClick={handleCompleteProject} className="gap-2 bg-white">
-                <CheckCircle2 size={15} /> Mark Complete
+                <CheckCircle2 size={15} /> {t.workspace.markComplete}
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={handleDeleteProject} className="gap-2 bg-white text-destructive hover:text-destructive">
-              <Trash2 size={15} /> Delete
+              <Trash2 size={15} /> {t.workspace.delete}
             </Button>
             <Link href={`/workspace/${projectId}/settings`}>
               <Button variant="ghost" size="icon" className="text-slate-500"><Settings size={20} /></Button>
@@ -722,7 +737,7 @@ export default function Workspace() {
               className="flex min-h-0 flex-1 flex-col rounded-[17px] border border-white/50 p-5 shadow-[0px_4px_20px_-1px_rgba(0,0,0,0.15)] backdrop-blur"
               style={{ background: 'linear-gradient(118deg, rgba(255,244,229,0.9) -42%, rgba(240,240,240,0.4) 100%)' }}
             >
-              <h2 className="mb-4 text-xl font-bold text-slate-900">Project Members</h2>
+              <h2 className="mb-4 text-xl font-bold text-slate-900">{t.workspace.projectMembers}</h2>
 
               {/* Add member — only owner */}
               {isOwner && (
@@ -736,7 +751,7 @@ export default function Workspace() {
                         setMemberSearch(e.target.value)
                         setSelectedUserToAdd(null)
                       }}
-                      placeholder="Search by email to add member…"
+                      placeholder={t.workspace.searchByEmail}
                       className="h-9 rounded-xl border-white/60 bg-white/70 pr-8 text-sm"
                     />
                     {searchingUsers && (
@@ -782,7 +797,7 @@ export default function Workspace() {
                         className="shrink-0 gap-1.5"
                       >
                         <UserPlus size={13} />
-                        Add
+                        {t.workspace.add}
                       </Button>
                       <button
                         onClick={() => { setSelectedUserToAdd(null); setMemberSearch('') }}
@@ -857,7 +872,7 @@ export default function Workspace() {
               {/* Hierarchical member list */}
               <div className="-mr-2 flex-1 space-y-5 overflow-y-auto pr-2">
                 {membersGrouped.length === 0 && (
-                  <p className="text-sm text-slate-400">No members yet</p>
+                  <p className="text-sm text-slate-400">{t.workspace.noMembers}</p>
                 )}
                 {membersGrouped.map((group) => (
                   <div key={group.level}>
@@ -1481,16 +1496,16 @@ export default function Workspace() {
                   <label className="mb-1.5 block text-xs font-medium text-slate-500">Invite other teams (optional)</label>
                   <div className="flex flex-wrap gap-1.5">
                     {Object.keys(TEAM_LABEL)
-                      .filter((t) => t !== myTeam)
-                      .map((t) => {
-                        const selected = scheduleInvitedTeams.includes(t)
+                      .filter((tm) => tm !== myTeam)
+                      .map((tm) => {
+                        const selected = scheduleInvitedTeams.includes(tm)
                         return (
                           <button
-                            key={t}
+                            key={tm}
                             type="button"
                             onClick={() =>
                               setScheduleInvitedTeams((prev) =>
-                                selected ? prev.filter((x) => x !== t) : [...prev, t],
+                                selected ? prev.filter((x) => x !== tm) : [...prev, tm],
                               )
                             }
                             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
@@ -1499,7 +1514,7 @@ export default function Workspace() {
                                 : 'border-slate-200 text-slate-500 hover:border-primary/40'
                             }`}
                           >
-                            {TEAM_LABEL[t]}
+                            {TEAM_LABEL[tm]}
                           </button>
                         )
                       })}
@@ -1546,6 +1561,13 @@ export default function Workspace() {
           </div>
 
           <div className="space-y-4">
+            {/* How it flows: GitHub action drives the Notion task, never the reverse */}
+            <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
+              When this branch&apos;s PR is merged into the target branch (and approved),
+              Orchestra will update the Notion task for you — setting the property below to
+              the chosen value. The GitHub merge is the trigger; Notion is updated as a result.
+            </div>
+
             {/* Branch (fixed) */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-slate-700">Branch</label>
@@ -1592,7 +1614,7 @@ export default function Workspace() {
 
             {/* Completion property */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-slate-700">Mark complete via</label>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Notion property to update</label>
               {!linkTaskId ? (
                 <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-center text-xs text-slate-400">
                   Pick a task first.
@@ -1627,7 +1649,7 @@ export default function Workspace() {
             {/* Completion value */}
             {selectedProp && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-slate-700">Completed when value is</label>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Set value to (on merge)</label>
                 {selectedProp.type === 'checkbox' ? (
                   <select
                     value={linkCompletionValue}

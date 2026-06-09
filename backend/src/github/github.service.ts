@@ -110,7 +110,7 @@ export class GithubService {
       : [];
     const titleMap = new Map(linkedTasks.map((t) => [t.notionPageId, t.title]));
 
-    const branches: {
+    type BranchInfo = {
       repoId: string;
       repoFullName: string;
       name: string;
@@ -119,46 +119,51 @@ export class GithubService {
       linkedTaskPageId: string | null;
       linkedTaskTitle: string | null;
       syncState: string | null;
-    }[] = [];
+    };
 
-    for (const repo of project.repositories) {
-      try {
-        const response = await axios.get(
-          `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/branches`,
-          {
-            headers: {
-              Authorization: `Bearer ${project.owner.githubToken}`,
-              Accept: 'application/vnd.github+json',
+    // Fetch every repo's branches concurrently — a project with N repos used to
+    // pay N sequential GitHub round-trips; now it's bounded by the slowest one.
+    const perRepo = await Promise.all(
+      project.repositories.map(async (repo): Promise<BranchInfo[]> => {
+        try {
+          const response = await axios.get(
+            `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/branches`,
+            {
+              headers: {
+                Authorization: `Bearer ${project.owner.githubToken}`,
+                Accept: 'application/vnd.github+json',
+              },
             },
-          },
-        );
+          );
 
-        for (const branch of response.data) {
-          const link = linkMap.get(`${repo.id}::${branch.name}`);
-          branches.push({
-            repoId: repo.id,
-            repoFullName: `${repo.githubOwner}/${repo.githubRepo}`,
-            name: branch.name,
-            linked: !!link,
-            linkId: link?.id ?? null,
-            linkedTaskPageId: link?.notionTaskPageId ?? null,
-            linkedTaskTitle: link
-              ? titleMap.get(link.notionTaskPageId) ?? null
-              : null,
-            syncState: link?.syncState ?? null,
+          return response.data.map((branch: any): BranchInfo => {
+            const link = linkMap.get(`${repo.id}::${branch.name}`);
+            return {
+              repoId: repo.id,
+              repoFullName: `${repo.githubOwner}/${repo.githubRepo}`,
+              name: branch.name,
+              linked: !!link,
+              linkId: link?.id ?? null,
+              linkedTaskPageId: link?.notionTaskPageId ?? null,
+              linkedTaskTitle: link
+                ? titleMap.get(link.notionTaskPageId) ?? null
+                : null,
+              syncState: link?.syncState ?? null,
+            };
           });
+        } catch (error: any) {
+          const msg =
+            error?.response?.data?.message ?? error?.message ?? 'Unknown error';
+          console.error(
+            `Branch fetch failed for ${repo.githubOwner}/${repo.githubRepo}:`,
+            msg,
+          );
+          return [];
         }
-      } catch (error: any) {
-        const msg =
-          error?.response?.data?.message ?? error?.message ?? 'Unknown error';
-        console.error(
-          `Branch fetch failed for ${repo.githubOwner}/${repo.githubRepo}:`,
-          msg,
-        );
-      }
-    }
+      }),
+    );
 
-    return branches;
+    return perRepo.flat();
   }
 
   /** Remove a task↔branch link (lets the user re-link a branch). */
@@ -424,6 +429,22 @@ export class GithubService {
         activity
       );
     }
+
+    // When a commit lands on a linked branch, move the task to IN_PROGRESS
+    // (only if it hasn't already advanced to IN_REVIEW or DONE)
+    const branchName = payload.ref?.replace('refs/heads/', '');
+    if (!branchName) return;
+
+    const linkedTask = await this.prisma.taskBranchSync.findUnique({
+      where: { repoId_branchName: { repoId: projectRepo.id, branchName } },
+    });
+
+    if (linkedTask && (linkedTask.syncState === 'LINKED')) {
+      await this.prisma.taskBranchSync.update({
+        where: { id: linkedTask.id },
+        data: { syncState: 'IN_PROGRESS', lastSyncedAt: new Date() },
+      });
+    }
   }
 
   async handlePullRequest(payload: any) {
@@ -559,17 +580,12 @@ export class GithubService {
       }
 
       if(merged === false){
+        // PR closed without merging (e.g. declined) — keep the task's current
+        // state unchanged, just record the PR number and timestamp.
         await this.prisma.taskBranchSync.update({
-        where: {
-          id: linkedTask.id
-        },
-        data: {
-          prNumber: pr.number,
-          syncState: 'IN_PROGRESS',
-          lastSyncedAt: new Date(),
-          }
-        })
-
+          where: { id: linkedTask.id },
+          data: { prNumber: pr.number, lastSyncedAt: new Date() },
+        });
         return;
       }
     }
@@ -692,6 +708,29 @@ export class GithubService {
       throw new BadRequestException('This Notion task is already linked to another branch');
     }
 
+    // Check if the branch already has commits — if so, start in IN_PROGRESS
+    // so the task status reflects reality immediately on linking.
+    let initialState: 'LINKED' | 'IN_PROGRESS' = 'LINKED';
+    try {
+      const project = await this.prisma.project.findFirst({
+        where: { id: projectId },
+        include: { owner: true, repositories: { where: { id: repoId } } },
+      });
+      const repo = project?.repositories[0];
+      const token = project?.owner?.githubToken;
+      if (repo && token) {
+        const resp = await axios.get(
+          `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/commits?sha=${encodeURIComponent(branchName)}&per_page=1`,
+          { headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json' } },
+        );
+        if (Array.isArray(resp.data) && resp.data.length > 0) {
+          initialState = 'IN_PROGRESS';
+        }
+      }
+    } catch {
+      // Non-fatal — default to LINKED if GitHub check fails
+    }
+
     const linkedTask = await this.prisma.taskBranchSync.create({
       data: {
         projectId: projectId,
@@ -703,11 +742,56 @@ export class GithubService {
         completionValue: completionValue as any,
         branchName: branchName,
         targetBranch: targetBranch,
-        syncState: 'LINKED', // untuk MVP gapapa defaultnya linked, tapi nanti untuk production dia harus bisa baca current state branch dari github API
+        syncState: initialState,
       }
     });
 
     return linkedTask;
+  }
+
+  async disconnectRepository(projectId: string, repoId: string, userId: string) {
+    const project = await this.prisma.project.findFirst({
+      where: { id: projectId, ownerId: userId },
+      include: { owner: true },
+    });
+    if (!project) {
+      throw new ForbiddenException('Only the project owner can disconnect a repository');
+    }
+
+    const repo = await this.prisma.projectRepository.findFirst({
+      where: { id: repoId, projectId },
+    });
+    if (!repo) {
+      throw new NotFoundException('Repository not found in this project');
+    }
+
+    // Best-effort: delete the webhook from GitHub
+    if (project.owner.githubToken && process.env.GITHUB_WEBHOOK_URL) {
+      try {
+        const hooksResp = await axios.get(
+          `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/hooks`,
+          { headers: { Authorization: `Bearer ${project.owner.githubToken}`, Accept: 'application/vnd.github+json' } },
+        );
+        const hook = hooksResp.data.find(
+          (h: any) => h.config?.url === process.env.GITHUB_WEBHOOK_URL,
+        );
+        if (hook) {
+          await axios.delete(
+            `https://api.github.com/repos/${repo.githubOwner}/${repo.githubRepo}/hooks/${hook.id}`,
+            { headers: { Authorization: `Bearer ${project.owner.githubToken}`, Accept: 'application/vnd.github+json' } },
+          );
+        }
+      } catch (err: any) {
+        console.warn(`Could not delete GitHub webhook for ${repo.githubOwner}/${repo.githubRepo}:`, err?.message);
+      }
+    }
+
+    // Cascade: delete task-branch links, then the repo record
+    await this.prisma.taskBranchSync.deleteMany({ where: { repoId } });
+    await this.prisma.githubActivity.deleteMany({ where: { repoId } });
+    await this.prisma.projectRepository.delete({ where: { id: repoId } });
+
+    return { ok: true };
   }
 
   async findTaskBranchSync(repoId: string, branchName: string) {

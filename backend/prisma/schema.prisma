@@ -164,6 +164,7 @@ model NotionTask {
   assigneeEmails   String[] // emails of assignees (when Notion exposes them)
   assigneeNames    String[] // display names of assignees (fallback match)
   url              String?
+  dueDate          DateTime? // deadline (first date-type property in the Notion db)
   lastSyncedAt     DateTime @default(now())
   project          Project  @relation(fields: [projectId], references: [id])
 

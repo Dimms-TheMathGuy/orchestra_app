@@ -26,6 +26,7 @@ import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Textarea } from '@/app/components/ui/textarea'
 import { get, post, patch } from '@/app/lib/api'
+import { useLocale } from '@/app/context/LocaleContext'
 
 interface ZoomMeeting {
   id: string
@@ -139,6 +140,7 @@ function DraftEntryForm({ entry }: { entry: DraftEntry }) {
 export default function MeetingResultReview() {
   const params = useParams()
   const projectId = params?.projectId as string
+  const { t, locale } = useLocale()
 
   const [meetings, setMeetings] = useState<ZoomMeeting[]>([])
   const [selectedMeetingId, setSelectedMeetingId] = useState('')
@@ -183,7 +185,7 @@ export default function MeetingResultReview() {
         }
       } catch (error) {
         console.error(error)
-        toast.error('Failed to load meetings')
+        toast.error(t.meetingReview.failedLoad)
       } finally {
         setLoadingMeetings(false)
       }
@@ -193,62 +195,68 @@ export default function MeetingResultReview() {
   }, [projectId])
 
   const handlePullFromZoom = async () => {
-    if (!selectedMeetingId) { toast.error('Select a meeting first'); return }
+    if (!selectedMeetingId) { toast.error(t.meetingReview.selectMeetingFirst); return }
     setLoadingTranscript(true)
     setAiSummary(null)
+    let loaded = false
     try {
       const data = await get(`/zoom/meetings/${selectedMeetingId}/transcript`)
       setTranscript(data.transcript || '')
-      toast.success('Transcript pulled from Zoom')
+      toast.success(t.meetingReview.transcriptPulled)
+      loaded = true
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'No Zoom transcript yet — upload a .vtt instead')
+      toast.error(error instanceof Error ? error.message : t.meetingReview.noTranscript)
     } finally {
       setLoadingTranscript(false)
     }
+    if (loaded) handleGenerateAISummary()
   }
 
   const handleUploadVtt = async (file: File) => {
-    if (!selectedMeetingId) { toast.error('Select a meeting first'); return }
+    if (!selectedMeetingId) { toast.error(t.meetingReview.selectMeetingFirst); return }
     setLoadingTranscript(true)
     setAiSummary(null)
+    let loaded = false
     try {
       const text = await file.text()
       await post('/transcripts', { meetingId: selectedMeetingId, text })
       setTranscript(text)
-      toast.success('Transcript uploaded')
+      toast.success(t.meetingReview.transcriptUploaded)
+      loaded = true
     } catch {
-      toast.error('Failed to upload transcript')
+      toast.error(t.meetingReview.failedUpload)
     } finally {
       setLoadingTranscript(false)
     }
+    if (loaded) handleGenerateAISummary()
   }
 
   const handleGenerateAISummary = async () => {
-    if (!selectedMeetingId) { toast.error('Select a meeting first'); return }
+    if (!selectedMeetingId) { toast.error(t.meetingReview.selectMeetingFirst); return }
     setLoadingAISummary(true)
     try {
-      const result = await post(`/summaries/${selectedMeetingId}/ai-summary`, {})
+      const result = await post(`/summaries/${selectedMeetingId}/ai-summary`, { lang: locale })
       if (result?.error) { toast.error(result.error); return }
       setAiSummary(result)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to generate AI summary')
+      toast.error(error instanceof Error ? error.message : t.meetingReview.failedSummary)
     } finally {
       setLoadingAISummary(false)
     }
   }
 
   const handleGenerate = async () => {
-    if (!selectedMeetingId) { toast.error('Select a meeting first'); return }
-    if (!blockId.trim()) { toast.error('Enter the Notion page/template block ID'); return }
+    if (!selectedMeetingId) { toast.error(t.meetingReview.selectMeetingFirst); return }
+    if (!blockId.trim()) { toast.error(t.meetingReview.enterNotionBlock); return }
     setGenerating(true)
     try {
       const result = await post(`/summaries/${selectedMeetingId}`, { blockId })
       if (result?.error) { toast.error(result.error); return }
       setSummary(result)
       setJsonEditSet(new Set())
-      toast.success('Draft generated from transcript')
+      toast.success(t.meetingReview.draftGenerated)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to generate draft')
+      toast.error(error instanceof Error ? error.message : t.meetingReview.failedGenerate)
     } finally {
       setGenerating(false)
     }
@@ -272,7 +280,7 @@ export default function MeetingResultReview() {
     try {
       entries = JSON.parse(draft._rawEdit)
     } catch {
-      toast.error('Invalid JSON in draft entries')
+      toast.error(t.meetingReview.invalidJson)
       return
     }
     try {
@@ -283,9 +291,9 @@ export default function MeetingResultReview() {
           : prev,
       )
       setJsonEditSet((prev) => { const next = new Set(prev); next.delete(draft.draftId); return next })
-      toast.success('Draft updated')
+      toast.success(t.meetingReview.draftUpdated)
     } catch {
-      toast.error('Failed to update draft')
+      toast.error(t.meetingReview.failedUpdate)
     }
   }
 
@@ -297,9 +305,9 @@ export default function MeetingResultReview() {
           ? { ...prev, drafts: prev.drafts.map((d) => (d.draftId === draftId ? { ...d, status: 'cancelled' } : d)) }
           : prev,
       )
-      toast.success('Draft discarded')
+      toast.success(t.meetingReview.draftDiscarded)
     } catch {
-      toast.error('Failed to discard draft')
+      toast.error(t.meetingReview.failedDiscard)
     }
   }
 
@@ -313,9 +321,9 @@ export default function MeetingResultReview() {
           ? { ...prev, drafts: prev.drafts.map((d) => (d.draftId === draftId ? { ...d, status: 'approved' } : d)) }
           : prev,
       )
-      toast.success(`Synced ${result.syncedPages ?? ''} page(s) to Notion`.trim())
+      toast.success(t.meetingReview.syncedPages(result.syncedPages ?? ''))
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to sync to Notion')
+      toast.error(error instanceof Error ? error.message : t.meetingReview.failedSync)
     } finally {
       setApprovingId(null)
     }
@@ -345,13 +353,13 @@ export default function MeetingResultReview() {
         <div className="mx-auto max-w-4xl">
           {/* Breadcrumb + title */}
           <nav className="mb-2 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            <Link href={`/workspace/${projectId}`} className="hover:text-primary">Workspace</Link>
+            <Link href={`/workspace/${projectId}`} className="hover:text-primary">{t.meetingReview.breadcrumb}</Link>
             <ChevronRight size={11} />
-            <span className="flex items-center gap-1 text-primary"><Sparkles size={11} /> AI Note Taker</span>
+            <span className="flex items-center gap-1 text-primary"><Sparkles size={11} /> {t.meetingReview.aiNoteTaker}</span>
           </nav>
-          <h1 className="text-3xl font-extrabold tracking-tight">Meeting Result Review</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t.meetingReview.title}</h1>
           <p className="mt-2 mb-8 max-w-2xl text-muted-foreground">
-            Generate a schema-aware draft from the transcript, review and edit it, then sync to your Notion template.
+            {t.meetingReview.subtitle}
           </p>
 
           {/* Setup card */}
@@ -360,7 +368,7 @@ export default function MeetingResultReview() {
               {/* Meeting + transcript */}
               <div>
                 <h2 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <FileText size={14} className="text-primary" /> 1. Meeting &amp; Transcript
+                  <FileText size={14} className="text-primary" /> 1. {t.meetingReview.step1}
                 </h2>
                 <select
                   value={selectedMeetingId}
@@ -373,14 +381,14 @@ export default function MeetingResultReview() {
                   className="mb-3 w-full rounded-xl border border-border bg-input-background p-2.5 text-sm"
                   disabled={loadingMeetings}
                 >
-                  <option value="">{loadingMeetings ? 'Loading meetings...' : 'Select a meeting'}</option>
+                  <option value="">{loadingMeetings ? t.meetingReview.loadingMeetings : t.meetingReview.selectMeeting}</option>
                   {meetings.map((m) => (
                     <option key={m.id} value={m.id}>{m.topic} ({m.id})</option>
                   ))}
                 </select>
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" onClick={handlePullFromZoom} disabled={loadingTranscript || !selectedMeetingId} className="gap-2 rounded-xl">
-                    {loadingTranscript ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />} Pull from Zoom
+                    {loadingTranscript ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />} {t.meetingReview.pullFromZoom}
                   </Button>
                   <label className="inline-flex">
                     <input
@@ -393,7 +401,7 @@ export default function MeetingResultReview() {
                       }}
                     />
                     <span className="inline-flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border border-border px-3 text-sm transition-colors hover:bg-muted">
-                      <Upload size={14} /> Upload .vtt
+                      <Upload size={14} /> {t.meetingReview.uploadVtt}
                     </span>
                   </label>
                 </div>
@@ -402,16 +410,16 @@ export default function MeetingResultReview() {
               {/* Notion template + generate */}
               <div>
                 <h2 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  <Sparkles size={14} className="text-primary" /> 2. Notion template
+                  <Sparkles size={14} className="text-primary" /> 2. {t.meetingReview.step2}
                 </h2>
                 <Input
                   value={blockId}
                   onChange={(e) => setBlockId(e.target.value)}
-                  placeholder="Notion page / block ID"
+                  placeholder={t.meetingReview.notionPlaceholder}
                   className="mb-2 rounded-xl font-mono text-xs"
                 />
                 <p className="mb-3 text-xs text-muted-foreground">
-                  The AI reads this template's database schema, then generates a draft that matches it.
+                  {t.meetingReview.notionHint}
                 </p>
                 <Button
                   onClick={handleGenerate}
@@ -419,7 +427,7 @@ export default function MeetingResultReview() {
                   className="brand-gradient w-full gap-2 rounded-full font-semibold text-white border-0"
                 >
                   {generating ? <RefreshCw size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                  Generate Draft
+                  {generating ? t.meetingReview.generating : t.meetingReview.generateDraft}
                 </Button>
               </div>
             </div>
@@ -430,21 +438,8 @@ export default function MeetingResultReview() {
             <div className="mb-8 rounded-2xl border border-primary/15 bg-gradient-to-br from-primary/5 to-blue-500/5 p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="flex items-center gap-2 text-sm font-bold">
-                  <Sparkles size={15} className="text-primary" /> AI Summary
+                  <Sparkles size={15} className="text-primary" /> {t.meetingReview.aiSummary}
                 </h3>
-                {!aiSummary && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleGenerateAISummary}
-                    disabled={loadingAISummary}
-                    className="gap-1.5 rounded-lg border-primary/30 text-primary hover:bg-primary/10"
-                  >
-                    {loadingAISummary
-                      ? <><RefreshCw size={13} className="animate-spin" /> Generating…</>
-                      : <><Sparkles size={13} /> Generate Summary</>}
-                  </Button>
-                )}
                 {aiSummary && (
                   <Button
                     size="sm"
@@ -454,21 +449,15 @@ export default function MeetingResultReview() {
                     className="gap-1.5 rounded-lg text-muted-foreground hover:text-primary text-xs"
                   >
                     {loadingAISummary ? <RefreshCw size={12} className="animate-spin" /> : <RefreshCw size={12} />}
-                    Regenerate
+                    {t.meetingReview.regenerate}
                   </Button>
                 )}
               </div>
 
-              {!aiSummary && !loadingAISummary && (
-                <p className="text-sm text-muted-foreground italic">
-                  Click "Generate Summary" to get an AI-powered meeting summary and key decisions.
-                </p>
-              )}
-
-              {loadingAISummary && !aiSummary && (
+              {loadingAISummary && (
                 <div className="flex items-center gap-3 text-sm text-muted-foreground py-2">
                   <RefreshCw size={15} className="animate-spin text-primary" />
-                  Analyzing transcript…
+                  {t.meetingReview.analyzing}
                 </div>
               )}
 
@@ -476,7 +465,7 @@ export default function MeetingResultReview() {
                 <div className="space-y-4">
                   {/* Summary paragraph */}
                   <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">Overview</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1.5">{t.meetingReview.overview}</p>
                     <p className="text-sm leading-relaxed text-foreground">{aiSummary.summary}</p>
                   </div>
 
@@ -484,7 +473,7 @@ export default function MeetingResultReview() {
                   {aiSummary.keyDecisions.length > 0 && (
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2 flex items-center gap-1.5">
-                        <Lightbulb size={11} /> Key Decisions
+                        <Lightbulb size={11} /> {t.meetingReview.keyDecisions}
                       </p>
                       <ul className="space-y-1.5">
                         {aiSummary.keyDecisions.map((decision, i) => (
@@ -504,19 +493,19 @@ export default function MeetingResultReview() {
           {/* Structured Notion Drafts */}
           <div className="flex items-center justify-between mb-5">
             <h3 className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-widest text-muted-foreground">
-              <Database size={15} /> Structured Notion Drafts
+              <Database size={15} /> {t.meetingReview.draftsTitle}
             </h3>
-            {summary && <span className="text-[11px] font-medium text-muted-foreground">{pendingCount} pending</span>}
+            {summary && <span className="text-[11px] font-medium text-muted-foreground">{pendingCount} {t.meetingReview.pending}</span>}
           </div>
 
           <div className="space-y-5">
             {!summary ? (
               <div className="rounded-2xl border border-dashed border-border bg-card/50 py-20 text-center text-sm text-muted-foreground">
-                No draft yet. Load a transcript and generate a draft to begin.
+                {t.meetingReview.noDraft}
               </div>
             ) : summary.drafts.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border bg-card/50 py-20 text-center text-sm text-muted-foreground">
-                The AI returned no entries for this template.
+                {t.meetingReview.noEntries}
               </div>
             ) : (
               summary.drafts.map((draft) => {
@@ -540,7 +529,7 @@ export default function MeetingResultReview() {
                           <Database size={15} />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">Notion Template</p>
+                          <p className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground">{t.meetingReview.notionTemplate}</p>
                           <h4 className="text-xs font-bold">{draft.title}</h4>
                         </div>
                       </div>
@@ -556,7 +545,7 @@ export default function MeetingResultReview() {
                                 : 'border-border bg-white text-muted-foreground hover:border-primary/30 hover:text-primary'
                             }`}
                           >
-                            {isJsonMode ? <><FormInput size={11} /> Form</> : <><Code2 size={11} /> Edit JSON</>}
+                            {isJsonMode ? <><FormInput size={11} /> {t.meetingReview.form}</> : <><Code2 size={11} /> {t.meetingReview.editJson}</>}
                           </button>
                         )}
 
@@ -567,7 +556,7 @@ export default function MeetingResultReview() {
                               : 'border-amber-200/50 bg-amber-50 text-amber-700'
                           }`}
                         >
-                          {isApproved ? 'Synced' : isCancelled ? 'Discarded' : 'Ready to Sync'}
+                          {isApproved ? t.meetingReview.synced : isCancelled ? t.meetingReview.discarded : t.meetingReview.ready}
                         </span>
                       </div>
                     </div>
@@ -592,13 +581,13 @@ export default function MeetingResultReview() {
                         /* Minimalist form view */
                         <div className="space-y-4">
                           {draft.entries.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic py-2">No entries in this draft.</p>
+                            <p className="text-sm text-muted-foreground italic py-2">{t.meetingReview.noEntriesInDraft}</p>
                           ) : (
                             draft.entries.map((entry, ei) => (
                               <div key={ei} className="rounded-xl border border-border/60 bg-white overflow-hidden">
                                 {draft.entries.length > 1 && (
                                   <div className="px-4 py-2 bg-muted/40 border-b border-border/60">
-                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Entry {ei + 1}</span>
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{t.meetingReview.entry} {ei + 1}</span>
                                   </div>
                                 )}
                                 <div className="px-4 py-1">
@@ -621,15 +610,15 @@ export default function MeetingResultReview() {
                         <div className="flex items-center gap-2">
                           {isJsonMode && draft._rawEdit !== undefined && (
                             <Button size="sm" variant="outline" onClick={() => handleSaveEdit(draft)} className="gap-1.5">
-                              <Save size={13} /> Save
+                              <Save size={13} /> {t.meetingReview.save}
                             </Button>
                           )}
                           <Button size="sm" variant="ghost" onClick={() => handleCancelDraft(draft.draftId)} className="gap-1.5 text-destructive hover:text-destructive">
-                            <Trash2 size={13} /> Discard
+                            <Trash2 size={13} /> {t.meetingReview.discard}
                           </Button>
                           <Button size="sm" onClick={() => handleSyncToNotion(draft.draftId)} disabled={approvingId === draft.draftId} className="brand-gradient gap-1.5 text-white border-0">
                             <Send size={13} />
-                            {approvingId === draft.draftId ? 'Syncing...' : 'Sync'}
+                            {approvingId === draft.draftId ? t.meetingReview.syncing : t.meetingReview.sync}
                           </Button>
                         </div>
                       )}
@@ -649,7 +638,7 @@ export default function MeetingResultReview() {
                 className="brand-gradient flex h-14 w-full items-center justify-center gap-3 rounded-xl text-base font-bold text-white border-0 shadow-lg"
               >
                 <Send size={18} />
-                Commit &amp; Sync {pendingCount} draft{pendingCount > 1 ? 's' : ''} to Notion
+                {t.meetingReview.commitSync(pendingCount)}
               </Button>
             </div>
           )}
@@ -660,7 +649,7 @@ export default function MeetingResultReview() {
       <aside className="hidden w-96 shrink-0 flex-col border-l border-border bg-card xl:flex">
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4">
           <h3 className="flex items-center gap-2 font-bold">
-            <MessageSquare size={16} className="text-primary" /> Transcript
+            <MessageSquare size={16} className="text-primary" /> {t.meetingReview.transcript}
           </h3>
           {selectedMeeting && (
             <span className="max-w-[140px] truncate text-xs text-muted-foreground">{selectedMeeting.topic}</span>
@@ -670,7 +659,7 @@ export default function MeetingResultReview() {
         <div className="flex-1 overflow-y-auto px-6 py-6">
           {filteredSegments.length === 0 ? (
             <div className="py-16 text-center text-sm text-muted-foreground">
-              {transcript ? 'No matching lines.' : 'Pull or upload a transcript to see it here.'}
+              {transcript ? t.meetingReview.noMatchingLines : t.meetingReview.pullOrUpload}
             </div>
           ) : (
             <div className="space-y-6">
@@ -700,7 +689,7 @@ export default function MeetingResultReview() {
             <Input
               value={transcriptSearch}
               onChange={(e) => setTranscriptSearch(e.target.value)}
-              placeholder="Search transcript..."
+              placeholder={t.meetingReview.searchTranscript}
               className="rounded-lg pl-9 text-sm"
             />
           </div>

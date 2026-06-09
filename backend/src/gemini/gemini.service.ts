@@ -101,7 +101,7 @@ ${text}`;
         return validatedDrafts.data;
     }
 
-    async quickSummarize(text: string): Promise<{ summary: string; keyDecisions: string[] }> {
+    async quickSummarize(text: string, lang = 'en'): Promise<{ summary: string; keyDecisions: string[] }> {
         if (process.env.MOCK_GEMINI === 'true') {
             return {
                 summary: 'The team discussed project progress, upcoming deadlines, and assigned responsibilities for the next sprint.',
@@ -114,7 +114,10 @@ ${text}`;
         }
 
         const client = this.getClient();
-        const prompt = `You are an AI meeting summarizer.
+        const langInstruction = lang === 'id'
+            ? 'Respond entirely in Indonesian (Bahasa Indonesia).'
+            : 'Respond entirely in English.';
+        const prompt = `You are an AI meeting summarizer. ${langInstruction}
 Return a JSON object with exactly two fields:
 {
   "summary": "A concise 2-4 sentence summary of the meeting",

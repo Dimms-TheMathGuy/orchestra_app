@@ -215,6 +215,13 @@ export class ZoomService {
     async listMeetings(userId?: string) {
         const data = await this.zoomRequest<any>('get', '/users/me/meetings?page_size=30&type=scheduled');
 
+        // Map each Zoom meeting back to the project that owns it (if any), so the
+        // dashboard calendar can deep-link a meeting to its project workspace.
+        const claimed = await this.prisma.projectMeeting.findMany({
+            select: { zoomMeetingId: true, projectId: true },
+        });
+        const projectByMeeting = new Map(claimed.map((c) => [c.zoomMeetingId, c.projectId]));
+
         return (data.meetings ?? []).map((m: any) => {
             const id = String(m.id);
             const isHost = userId ? this.meetingHostMap.get(id) === userId : false;
@@ -226,6 +233,7 @@ export class ZoomService {
                 join_url: m.join_url,
                 password: m.password,
                 isHost,
+                projectId: projectByMeeting.get(id) ?? null,
                 // start_url is sensitive (grants host control) — only expose to the host
                 start_url: isHost ? m.start_url : undefined,
             };

@@ -25,20 +25,6 @@ export class ChatService {
     }
   }
 
-  private async ensureProjectAccess(projectId: string, userId: string) {
-    const project = await this.prisma.project.findFirst({
-      where: {
-        id: projectId,
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
-      },
-      select: { id: true },
-    })
-
-    if (!project) {
-      throw new ForbiddenException('Not a project member')
-    }
-  }
-
   /** True if the given member context may access the channel. */
   private canAccessChannel(
     channel: { type: ChannelType; team: string | null },
@@ -96,10 +82,12 @@ export class ChatService {
 
   /** All channels the user can access, in display order. */
   async getChannels(projectId: string, userId: string) {
-    await this.ensureProjectAccess(projectId, userId)
+    // getMemberContext doubles as the access check (isMember) — no separate query.
+    const ctx = await this.roles.getMemberContext(projectId, userId)
+    if (!ctx.isMember) throw new ForbiddenException('Not a project member')
+
     await this.ensureChannels(projectId)
 
-    const ctx = await this.roles.getMemberContext(projectId, userId)
     const channels = await this.prisma.chatChannel.findMany({
       where: { projectId },
     })
@@ -122,23 +110,29 @@ export class ChatService {
 
   /** Resolve & authorize a channel for this user; returns the channel row. */
   private async resolveChannel(projectId: string, userId: string, channelId?: string) {
-    await this.ensureProjectAccess(projectId, userId)
-    await this.ensureChannels(projectId)
-
     const ctx = await this.roles.getMemberContext(projectId, userId)
+    if (!ctx.isMember) throw new ForbiddenException('Not a project member')
 
     let channel
     if (channelId) {
+      // The channel already exists (the client got its id from getChannels), so
+      // skip the provisioning pass — just look it up.
       channel = await this.prisma.chatChannel.findFirst({
         where: { id: channelId, projectId },
       })
       if (!channel) throw new NotFoundException('Channel not found')
     } else {
-      // Default to GENERAL
+      // Default to GENERAL — provision lazily only if this project has none yet.
       channel = await this.prisma.chatChannel.findFirst({
         where: { projectId, type: 'GENERAL' },
       })
-      if (!channel) throw new NotFoundException('General channel missing')
+      if (!channel) {
+        await this.ensureChannels(projectId)
+        channel = await this.prisma.chatChannel.findFirst({
+          where: { projectId, type: 'GENERAL' },
+        })
+        if (!channel) throw new NotFoundException('General channel missing')
+      }
     }
 
     if (!this.canAccessChannel(channel, ctx)) {

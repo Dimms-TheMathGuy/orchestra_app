@@ -4,21 +4,25 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/app/context/AuthContext'
+import { useLocale } from '@/app/context/LocaleContext'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { Input } from '@/app/components/ui/input'
 import { Label } from '@/app/components/ui/label'
-import { Camera, Github, CheckCircle2, ShieldCheck, FolderKanban, Users, Share2 } from 'lucide-react'
+import { Camera, Github, CheckCircle2, ShieldCheck, FolderKanban, Users, Fingerprint } from 'lucide-react'
 import { patch, get } from '@/app/lib/api'
 
 export default function EditProfile() {
   const { user, updateProfile } = useAuth()
+  const { t } = useLocale()
   const [name, setName] = useState(user?.name || '')
   const [email, setEmail] = useState(user?.email || '')
   const [company, setCompany] = useState(user?.company || '')
   const [avatarUrl, setAvatarUrl] = useState(user?.avatarUrl || '')
   const [loading, setLoading] = useState(false)
   const [stats, setStats] = useState({ owned: 0, memberships: 0 })
+  const [hasPasskey, setHasPasskey] = useState(false)
+  const [passkeyLoading, setPasskeyLoading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -40,12 +44,49 @@ export default function EditProfile() {
         setStats({ owned, memberships: projects.length })
       })
       .catch(() => {})
+    fetch(`http://localhost:3000/passkey/status/${user.id}`)
+      .then((r) => r.json())
+      .then((d) => setHasPasskey(d.hasPasskey ?? false))
+      .catch(() => {})
   }, [user])
+
+  const handleAddPasskey = async () => {
+    if (!user) return
+    setPasskeyLoading(true)
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser')
+
+      const optRes = await fetch('http://localhost:3000/passkey/register/options', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+      const options = await optRes.json()
+      if (options.error) throw new Error(options.error)
+
+      const attResp = await startRegistration({ optionsJSON: options })
+
+      const verRes = await fetch('http://localhost:3000/passkey/register/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, response: attResp }),
+      })
+      const result = await verRes.json()
+      if (!result.verified) throw new Error(t.editProfile.passkeyRegisterError)
+
+      setHasPasskey(true)
+      toast.success(t.editProfile.passkeyRegistered)
+    } catch (err: any) {
+      toast.error(err?.message ?? t.editProfile.passkeyRegisterError)
+    } finally {
+      setPasskeyLoading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) {
-      toast.error('You need to be logged in to update your profile')
+      toast.error(t.editProfile.notLoggedIn)
       return
     }
 
@@ -53,10 +94,10 @@ export default function EditProfile() {
     try {
       await patch(`/users/${user.id}`, { name, company, avatarUrl })
       updateProfile({ name, company, avatarUrl })
-      toast.success('Profile updated successfully!')
+      toast.success(t.editProfile.success)
       router.push('/dashboard')
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update profile')
+      toast.error(error instanceof Error ? error.message : t.editProfile.error)
     } finally {
       setLoading(false)
     }
@@ -109,16 +150,16 @@ export default function EditProfile() {
     if (!file) return
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please choose an image file')
+      toast.error(t.editProfile.chooseImage)
       return
     }
 
     try {
       const resizedAvatar = await resizeAvatar(file)
       setAvatarUrl(resizedAvatar)
-      toast.success('Avatar preview updated')
+      toast.success(t.editProfile.avatarUpdated)
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to read image file')
+      toast.error(error instanceof Error ? error.message : t.editProfile.failedImage)
     } finally {
       event.target.value = ''
     }
@@ -156,7 +197,7 @@ export default function EditProfile() {
           </div>
 
           <div className="text-center md:text-left">
-            <h1 className="text-2xl font-extrabold tracking-tight">{name || 'Your Name'}</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">{name || t.editProfile.yourName}</h1>
             <p className="mt-1 text-muted-foreground">{email}</p>
             <div className="mt-3 flex flex-wrap items-center justify-center gap-2 md:justify-start">
               {company && (
@@ -165,54 +206,41 @@ export default function EditProfile() {
                 </span>
               )}
               <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
-                <ShieldCheck size={12} /> Verified
+                <ShieldCheck size={12} /> {t.editProfile.verified}
               </span>
             </div>
           </div>
 
-          <div className="md:ml-auto">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                navigator.clipboard?.writeText(email)
-                toast.success('Email copied to clipboard')
-              }}
-              className="gap-2 rounded-lg"
-            >
-              <Share2 size={15} /> Share Profile
-            </Button>
-          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:items-stretch">
         {/* Personal info form */}
-        <form onSubmit={handleSubmit} className="space-y-6 lg:col-span-7">
-          <section className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-            <h3 className="mb-6 text-lg font-bold">Personal Information</h3>
+        <form onSubmit={handleSubmit} className="flex flex-col lg:col-span-7">
+          <section className="flex-1 rounded-2xl border border-border bg-card p-8 shadow-sm">
+            <h3 className="mb-6 text-lg font-bold">{t.editProfile.title}</h3>
             <div className="space-y-5">
               <div>
                 <Label htmlFor="name" className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Full Name
+                  {t.editProfile.fullName}
                 </Label>
                 <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required className="h-12 rounded-xl" />
               </div>
               <div>
                 <Label htmlFor="email" className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Email Address
+                  {t.editProfile.emailAddress}
                 </Label>
                 <Input id="email" type="email" value={email} disabled className="h-12 rounded-xl opacity-70" />
               </div>
               <div>
                 <Label htmlFor="company" className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Company
+                  {t.editProfile.company}
                 </Label>
                 <Input
                   id="company"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
-                  placeholder="Your company or organization"
+                  placeholder={t.editProfile.companyPlaceholder}
                   className="h-12 rounded-xl"
                 />
               </div>
@@ -223,10 +251,10 @@ export default function EditProfile() {
                   disabled={loading}
                   className="brand-gradient h-11 rounded-full px-8 font-semibold text-white shadow-lg shadow-primary/20 border-0"
                 >
-                  {loading ? 'Saving...' : 'Save Changes'}
+                  {loading ? t.editProfile.submitting : t.editProfile.submit}
                 </Button>
                 <Button type="button" variant="ghost" onClick={() => router.push('/dashboard')} className="rounded-full px-6">
-                  Cancel
+                  {t.editProfile.cancel}
                 </Button>
               </div>
             </div>
@@ -234,9 +262,9 @@ export default function EditProfile() {
         </form>
 
         {/* Connected accounts */}
-        <div className="space-y-6 lg:col-span-5">
+        <div className="flex flex-col gap-6 lg:col-span-5">
           <section className="rounded-2xl border border-border bg-card p-8 shadow-sm">
-            <h3 className="mb-6 text-lg font-bold">Connected Accounts</h3>
+            <h3 className="mb-6 text-lg font-bold">{t.editProfile.connectedAccounts}</h3>
             <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card">
@@ -245,22 +273,22 @@ export default function EditProfile() {
                 <div>
                   <p className="text-sm font-bold">GitHub</p>
                   <p className="text-xs text-muted-foreground">
-                    {user?.githubUsername ? `@${user.githubUsername}` : 'Not connected'}
+                    {user?.githubUsername ? `@${user.githubUsername}` : t.editProfile.notConnected}
                   </p>
                 </div>
               </div>
               {user?.githubUsername ? (
                 <span className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-[10px] font-bold text-green-600">
-                  <CheckCircle2 size={12} /> Connected
+                  <CheckCircle2 size={12} /> {t.editProfile.connected}
                 </span>
               ) : (
                 <Link href="/dashboard/settings" className="text-xs font-bold text-primary hover:underline">
-                  Connect
+                  {t.editProfile.connect}
                 </Link>
               )}
             </div>
             <p className="mt-4 text-xs text-muted-foreground">
-              Manage integrations and security from{' '}
+              {t.editProfile.manageIntegrations}{' '}
               <Link href="/dashboard/settings" className="font-semibold text-primary hover:underline">
                 Settings
               </Link>
@@ -268,24 +296,59 @@ export default function EditProfile() {
             </p>
           </section>
 
+          {/* Security */}
+          <section className="rounded-2xl border border-border bg-card p-8 shadow-sm">
+            <h3 className="mb-6 text-lg font-bold">{t.editProfile.security}</h3>
+            <div className="flex items-center justify-between rounded-xl bg-muted/50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-card">
+                  <Fingerprint size={18} />
+                </div>
+                <div>
+                  <p className="text-sm font-bold">Passkey</p>
+                  <p className="text-xs text-muted-foreground">
+                    {hasPasskey ? t.editProfile.hasPasskey : t.editProfile.notConnected}
+                  </p>
+                </div>
+              </div>
+              {hasPasskey ? (
+                <span className="inline-flex items-center gap-1 rounded bg-green-500/10 px-2 py-1 text-[10px] font-bold text-green-600">
+                  <CheckCircle2 size={12} /> {t.editProfile.connected}
+                </span>
+              ) : (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleAddPasskey}
+                  disabled={passkeyLoading}
+                  className="rounded-lg text-xs gap-1"
+                >
+                  <Fingerprint size={13} />
+                  {passkeyLoading ? '...' : t.editProfile.addPasskey}
+                </Button>
+              )}
+            </div>
+          </section>
+
           {/* Workspace Summary */}
-          <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm">
+          <section className="relative flex-1 overflow-hidden rounded-2xl border border-border bg-card p-8 shadow-sm">
             <div className="brand-blob right-[-15%] top-[-40%] h-40 w-40 bg-primary/10" />
-            <h3 className="mb-6 text-lg font-bold">Workspace Summary</h3>
+            <h3 className="mb-6 text-lg font-bold">{t.editProfile.workspaceSummary}</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl border border-border bg-muted/40 p-4">
                 <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
                   <FolderKanban size={14} />
                 </div>
                 <p className="text-3xl font-extrabold text-primary">{stats.owned}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projects Owned</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t.editProfile.projectsOwned}</p>
               </div>
               <div className="rounded-xl border border-border bg-muted/40 p-4">
                 <div className="mb-1 flex items-center gap-1.5 text-muted-foreground">
                   <Users size={14} />
                 </div>
                 <p className="text-3xl font-extrabold text-primary">{stats.memberships}</p>
-                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Memberships</p>
+                <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t.editProfile.memberships}</p>
               </div>
             </div>
           </section>

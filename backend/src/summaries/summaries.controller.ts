@@ -8,8 +8,8 @@ export class SummariesController {
     constructor(private summaries: SummariesService) { }
 
     @Post(':meetingId/ai-summary')
-    aiSummary(@Param('meetingId') id: string) {
-        return this.summaries.summarizeTranscript(id);
+    aiSummary(@Param('meetingId') id: string, @Body('lang') lang?: string) {
+        return this.summaries.summarizeTranscript(id, lang ?? 'en');
     }
 
     @Post(':meetingId')

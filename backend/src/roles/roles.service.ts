@@ -115,16 +115,24 @@ export class RolesService {
     projectId: string,
     userId: string,
   ): Promise<MemberContext> {
-    const project = await this.prisma.project.findUnique({
-      where: { id: projectId },
-      select: { ownerId: true },
-    });
+    // One query in the common case: the member row carries the project's ownerId
+    // via the relation. Owners are seeded as members on project creation, so the
+    // fallback project lookup only runs for the rare owner-without-member-row.
     const member = await this.prisma.projectMember.findUnique({
       where: { userId_projectId: { userId, projectId } },
-      include: { projectRole: true },
+      include: { projectRole: true, project: { select: { ownerId: true } } },
     });
 
-    const isOwner = project?.ownerId === userId;
+    let ownerId = member?.project.ownerId;
+    if (ownerId === undefined) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { ownerId: true },
+      });
+      ownerId = project?.ownerId;
+    }
+
+    const isOwner = ownerId === userId;
     const isMember = isOwner || !!member;
     const roleName = member?.projectRole?.name ?? null;
     const level = member?.projectRole?.level ?? (isOwner ? 0 : 99);

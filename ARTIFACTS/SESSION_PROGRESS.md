@@ -45,6 +45,17 @@
 - **Chat "Failed to load channels" fix**: `ensureChannels` used `prisma.chatChannel.upsert()` with `team: null` in the composite unique `where` clause — Prisma throws at runtime ("Argument `team` must not be null") even though the TypeScript `null as any` cast silenced the type error. Fixed by replacing all three `upsert` calls with a `findMany` existence check + `createMany({ skipDuplicates: true })` pattern.
 - **Logo size increase**: Sidebar expanded logo raised from `height={30}` → `height={44}` in `Sidebar.tsx`.
 
+### Batch 7 — Performance pass (responsiveness)
+Root cause of the "lemot": external API calls (Zoom, GitHub) sitting in the critical render path, plus redundant DB round-trips per request. No data-volume issue at current scale, so the fixes are about **query count** and **call ordering**, not indexes.
+- **Workspace page**: the initial load awaited `/api/github/repos` (external GitHub call) before `setLoading(false)` AND set all state after it — so the whole page waited on GitHub even when a repo was already linked (repos are only used by the repo-picker shown when **no** repo is connected). Now: state is set right after the fast local-DB `Promise.all`; the Zoom meetings call is fired out-of-band (fills in async); repos load lazily via a separate effect **only when no repo is linked**.
+- **Dashboard page**: `/dashboard` (fast, our DB) and `/zoom/meetings` (slow, external) were in one `Promise.all`, so render waited on the slower Zoom call. Decoupled — dashboard renders as soon as `/dashboard` returns; meetings populate independently.
+- **`roles.getMemberContext`** (hot path — every chat + zoom request): collapsed 2 sequential queries (project + member) into 1 by pulling `ownerId` through the member→project relation; the project fallback only runs for the rare owner-without-member-row.
+- **`chat.service`**: a chat page load was ~11 queries (channels list + messages each re-running access checks + channel provisioning). `getMemberContext` now doubles as the access check (dropped the separate `ensureProjectAccess` query, deleted the method), and `ensureChannels` no longer runs on every `getMessages`/channel-by-id fetch — only lazily when defaulting to GENERAL and none exist. ~11 → ~4 queries.
+- **`github.getProjectBranches`**: per-repo branch fetches were a sequential `for await` loop → `Promise.all` (bounded by the slowest repo instead of the sum).
+- **`tasks.fetchAndCacheTasks`**: per-child-database Notion queries were sequential → `Promise.all`.
+- **`dashboard.service`**: user + projects queries now dispatch concurrently via `Promise.all` (note: a bare `const x = prisma.findMany()` is lazy and does NOT start until awaited/`.then`'d — `Promise.all` is what triggers both). The per-user Notion-task query now filters by `projectId IN (already-loaded ids)` instead of re-running the membership join.
+- Verified: backend + frontend `tsc --noEmit` clean; `POST /dashboard` (real userId) → 201 in ~57ms; new `getMemberContext` query shape validated against the DB.
+
 ## Pending Next Steps
 - (none queued). Future ideas: filter the link-task picker to task-like databases only; Notion webhook for true realtime; persist Notion assignee→Orchestra user mapping for name-based assignees.
 
