@@ -442,12 +442,13 @@ export default function Dashboard() {
               ))}
               {weekDays.map((d, i) => {
                 const hasItems = d.hasMeeting || d.hasDeadline
+                const isSelected = selectedDay === d.fullDate
                 return (
                   <button
                     key={`d${i}`}
                     type="button"
-                    onClick={() => setSelectedDay(d.fullDate)}
-                    className="relative py-2 transition-colors hover:bg-muted/60 rounded-lg"
+                    onClick={() => setSelectedDay((prev) => (prev === d.fullDate ? null : d.fullDate))}
+                    className={`relative py-2 rounded-lg transition-colors hover:bg-muted/60 ${isSelected ? 'bg-muted ring-1 ring-primary/40' : ''}`}
                   >
                     <span className={`mx-auto flex h-7 w-7 items-center justify-center rounded-lg text-xs ${d.isToday ? 'brand-gradient font-bold text-white' : 'text-foreground'}`}>
                       {d.date}
@@ -462,33 +463,105 @@ export default function Dashboard() {
                 )
               })}
             </div>
-            <div className="space-y-3">
-              {upcoming.slice(0, 3).map((m) => {
-                const isFuture = m.start_time ? new Date(m.start_time).getTime() > Date.now() : false
-                const actionUrl = isFuture ? (m.isHost ? m.start_url : m.join_url) : undefined
-                return (
-                  <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
-                    <div className="h-8 w-1 rounded-full bg-primary" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-[11px] font-bold">{m.topic}</p>
-                      <p className="text-[9px] text-muted-foreground">
-                        {m.start_time ? new Date(m.start_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                      </p>
-                    </div>
-                    {actionUrl && (
-                      <a
-                        href={actionUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-[9px] font-bold text-white hover:opacity-90"
-                      >
-                        {m.isHost ? t.dashboard.startMeeting : t.dashboard.joinMeeting}
-                      </a>
-                    )}
+            {/* Fixed-height region so the widget never resizes with item count */}
+            <div className="flex h-[150px] flex-col">
+              {selectedDay ? (
+                /* A calendar day is selected → show that day's meetings + deadlines inline */
+                <>
+                  <div className="mb-3 flex shrink-0 items-center justify-between">
+                    <p className="text-[11px] font-bold text-foreground">
+                      {new Date(selectedDay).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </p>
+                    <button
+                      onClick={() => setSelectedDay(null)}
+                      className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground hover:text-primary"
+                    >
+                      {t.dashboard.upcomingMeet}
+                    </button>
                   </div>
-                )
-              })}
-              {upcoming.length === 0 && <p className="text-xs text-muted-foreground">{t.dashboard.noUpcomingMeetings}</p>}
+
+                  <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                    {selectedDayItems.meetings.length === 0 && selectedDayItems.tasks.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Nothing scheduled.</p>
+                    )}
+
+                    {selectedDayItems.meetings.map((m) => {
+                      const isFuture = m.start_time ? new Date(m.start_time).getTime() > Date.now() : false
+                      return (
+                        <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                          <div className="h-8 w-1 rounded-full bg-primary" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[11px] font-bold">{m.topic}</p>
+                            <p className="text-[9px] text-muted-foreground">
+                              {m.start_time ? new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              // Deep-link to the project's in-app meeting window when known;
+                              // otherwise fall back to the raw Zoom URL.
+                              if (m.projectId) {
+                                router.push(`/workspace/${m.projectId}/zoom/${m.id}`)
+                              } else {
+                                const url = m.isHost ? m.start_url : m.join_url
+                                if (url) window.open(url, '_blank', 'noopener,noreferrer')
+                              }
+                            }}
+                            className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-[9px] font-bold text-white hover:opacity-90"
+                          >
+                            {m.isHost && isFuture ? t.dashboard.startMeeting : t.dashboard.joinMeeting}
+                          </button>
+                        </div>
+                      )
+                    })}
+
+                    {selectedDayItems.tasks.map((task) => (
+                      <button
+                        key={task.notionPageId}
+                        onClick={() => router.push(`/workspace/${task.projectId}`)}
+                        className="flex w-full items-center gap-3 rounded-lg border border-border bg-muted/40 p-3 text-left hover:border-primary/30 hover:bg-primary/5"
+                      >
+                        <div className="h-8 w-1 rounded-full bg-amber-500" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-bold">{task.title}</p>
+                          <p className="text-[9px] text-muted-foreground">{task.status ?? 'Deadline'}</p>
+                        </div>
+                        <ExternalLink size={12} className="shrink-0 text-muted-foreground" />
+                      </button>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                /* Default view → upcoming meetings */
+                <div className="flex-1 space-y-3 overflow-y-auto pr-1">
+                  {upcoming.slice(0, 3).map((m) => {
+                    const isFuture = m.start_time ? new Date(m.start_time).getTime() > Date.now() : false
+                    const actionUrl = isFuture ? (m.isHost ? m.start_url : m.join_url) : undefined
+                    return (
+                      <div key={m.id} className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+                        <div className="h-8 w-1 rounded-full bg-primary" />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11px] font-bold">{m.topic}</p>
+                          <p className="text-[9px] text-muted-foreground">
+                            {m.start_time ? new Date(m.start_time).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                          </p>
+                        </div>
+                        {actionUrl && (
+                          <a
+                            href={actionUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 rounded-lg bg-primary px-2.5 py-1 text-[9px] font-bold text-white hover:opacity-90"
+                          >
+                            {m.isHost ? t.dashboard.startMeeting : t.dashboard.joinMeeting}
+                          </a>
+                        )}
+                      </div>
+                    )
+                  })}
+                  {upcoming.length === 0 && <p className="text-xs text-muted-foreground">{t.dashboard.noUpcomingMeetings}</p>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -583,109 +656,6 @@ export default function Dashboard() {
       </div>
     )}
 
-    {/* Day detail modal (calendar) */}
-    {selectedDay && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-        <div className="flex w-full max-w-lg flex-col rounded-2xl bg-white shadow-2xl" style={{ maxHeight: '80vh' }}>
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h3 className="text-base font-bold text-slate-900">
-              {new Date(selectedDay).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}
-            </h3>
-            <button
-              onClick={() => setSelectedDay(null)}
-              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-5 overflow-y-auto px-5 py-4">
-            {/* Meetings */}
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <Video size={13} /> Meetings
-              </p>
-              {selectedDayItems.meetings.length === 0 ? (
-                <p className="text-xs text-slate-400">No meetings.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {selectedDayItems.meetings.map((m) => {
-                    const isFuture = m.start_time ? new Date(m.start_time).getTime() > Date.now() : false
-                    return (
-                      <li key={m.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
-                        <div className="h-8 w-1 rounded-full bg-primary" />
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-slate-800">{m.topic}</p>
-                          <p className="text-[10px] text-slate-400">
-                            {m.start_time ? new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedDay(null)
-                            // Deep-link to the project's in-app meeting window when we know
-                            // the owning project; fall back to the raw Zoom URL otherwise.
-                            if (m.projectId) {
-                              router.push(`/workspace/${m.projectId}/zoom/${m.id}`)
-                            } else {
-                              const url = m.isHost ? m.start_url : m.join_url
-                              if (url) window.open(url, '_blank', 'noopener,noreferrer')
-                            }
-                          }}
-                          className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-[11px] font-bold text-white hover:opacity-90"
-                        >
-                          {m.isHost && isFuture ? t.dashboard.startMeeting : t.dashboard.joinMeeting}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )}
-            </div>
-
-            {/* Task deadlines */}
-            <div>
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-                <CheckSquare size={13} /> Task deadlines
-              </p>
-              {selectedDayItems.tasks.length === 0 ? (
-                <p className="text-xs text-slate-400">No task deadlines.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {selectedDayItems.tasks.map((task) => (
-                    <li key={task.notionPageId}>
-                      <button
-                        onClick={() => {
-                          setSelectedDay(null)
-                          router.push(`/workspace/${task.projectId}`)
-                        }}
-                        className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-left hover:border-primary/30 hover:bg-primary/5"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium text-slate-800">{task.title}</p>
-                          {task.status && (
-                            <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                              task.statusGroup === 'done'
-                                ? 'bg-green-100 text-green-700'
-                                : task.statusGroup === 'in_progress'
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-slate-200 text-slate-600'
-                            }`}>
-                              {task.status}
-                            </span>
-                          )}
-                        </div>
-                        <ExternalLink size={14} className="shrink-0 text-slate-400" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    )}
     </>
   )
 }

@@ -19,7 +19,8 @@ export default function GithubActivityWidget({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const socket: Socket = io("http://localhost:3000");
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+    const socket: Socket = io(apiBaseUrl);
 
     socket.emit("joinProject", projectId);
 
@@ -27,7 +28,7 @@ export default function GithubActivityWidget({
       setActivities((prev) => [activity, ...prev]);
     });
 
-    fetch(`http://localhost:3000/api/github/${projectId}/github-activity`)
+    fetch(`${apiBaseUrl}/api/github/${projectId}/github-activity`)
       .then((res) => res.json())
       .then((data) => {
         setActivities(data);

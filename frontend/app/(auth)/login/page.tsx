@@ -34,7 +34,7 @@ export default function Login() {
     try {
       const { startAuthentication } = await import('@simplewebauthn/browser')
 
-      const optRes = await fetch('http://localhost:3000/passkey/auth/options', {
+      const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/passkey/auth/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
@@ -44,7 +44,7 @@ export default function Login() {
 
       const assertion = await startAuthentication({ optionsJSON: options })
 
-      const verRes = await fetch('http://localhost:3000/passkey/auth/verify', {
+      const verRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/passkey/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, response: assertion }),

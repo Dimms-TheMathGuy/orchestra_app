@@ -44,7 +44,7 @@ export default function EditProfile() {
         setStats({ owned, memberships: projects.length })
       })
       .catch(() => {})
-    fetch(`http://localhost:3000/passkey/status/${user.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/passkey/status/${user.id}`)
       .then((r) => r.json())
       .then((d) => setHasPasskey(d.hasPasskey ?? false))
       .catch(() => {})
@@ -56,7 +56,7 @@ export default function EditProfile() {
     try {
       const { startRegistration } = await import('@simplewebauthn/browser')
 
-      const optRes = await fetch('http://localhost:3000/passkey/register/options', {
+      const optRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/passkey/register/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -66,7 +66,7 @@ export default function EditProfile() {
 
       const attResp = await startRegistration({ optionsJSON: options })
 
-      const verRes = await fetch('http://localhost:3000/passkey/register/verify', {
+      const verRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/passkey/register/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, response: attResp }),

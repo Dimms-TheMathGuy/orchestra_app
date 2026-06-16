@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { io, type Socket } from 'socket.io-client'
 import {
   Video, Calendar, ExternalLink, Sparkles, RefreshCw, UserPlus, Trash2,
   Github, MessageSquare, Settings, CheckCircle2, Link2, ChevronDown, Pencil, X, Crown,
-  Shield, ChevronRight, Send, Users, GitBranch, Loader2,
+  Shield, ChevronRight, Send, Users, GitBranch, Loader2, History, PlayCircle, CalendarClock,
 } from 'lucide-react'
 import { get, patch, post, del } from '@/app/lib/api'
 import { Button } from '@/app/components/ui/button'
@@ -62,6 +63,7 @@ interface Meeting {
   topic: string
   startTime?: string
   start_time?: string
+  duration?: number
   joinUrl?: string
   join_url?: string
   password?: string
@@ -202,6 +204,7 @@ export default function Workspace() {
   const [scheduleScope, setScheduleScope] = useState<'project' | 'team'>('project')
   const [scheduleInvitedTeams, setScheduleInvitedTeams] = useState<string[]>([])
   const [syncingGithub, setSyncingGithub] = useState(false)
+  const [repairingRepo, setRepairingRepo] = useState<string | null>(null)
   // GitHub widget: "activity" feed vs "tasks" (link branch ↔ Notion task)
   const [githubTab, setGithubTab] = useState<'activity' | 'tasks'>('activity')
   const [branches, setBranches] = useState<GitBranchInfo[]>([])
@@ -215,6 +218,8 @@ export default function Workspace() {
   const [linkTargetBranch, setLinkTargetBranch] = useState('main')
   const [linkCompletionProp, setLinkCompletionProp] = useState('')
   const [linkCompletionValue, setLinkCompletionValue] = useState('')
+  const [linkInProgressValue, setLinkInProgressValue] = useState('')
+  const [linkRequireApproval, setLinkRequireApproval] = useState(false)
   const [submittingLink, setSubmittingLink] = useState(false)
   const [loading, setLoading] = useState(true)
   const [addingMember, setAddingMember] = useState(false)
@@ -232,6 +237,9 @@ export default function Workspace() {
   const [notionEmbedUrl, setNotionEmbedUrl] = useState('')
   const [editingEmbed, setEditingEmbed] = useState(false)
   const [embedDraft, setEmbedDraft] = useState('')
+  // Bumped to force a full iframe reload — Notion's public embed is CDN-cached
+  // and won't reflect status changes until the frame is remounted.
+  const [embedReloadKey, setEmbedReloadKey] = useState(0)
 
   useEffect(() => {
     if (projectId) fetchProjectData()
@@ -308,14 +316,31 @@ export default function Workspace() {
   const handleGithubSync = async () => {
     setSyncingGithub(true)
     try {
-      await post(`/api/github/projects/${projectId}/sync`, {})
+      const result = await post(`/api/github/projects/${projectId}/sync`, {})
       const data = await get(`/api/github/projects/${projectId}/github-activity`)
       setActivities(data || [])
-      toast.success(t.workspace.githubSynced)
+      // Reconcile may have advanced linked-task states — refresh the branch badges.
+      loadBranches()
+      const updated = result?.tasksUpdated ?? 0
+      // Task statuses changed in Notion — reload the cached embed to show them.
+      if (updated > 0) setEmbedReloadKey((k) => k + 1)
+      toast.success(updated > 0 ? t.workspace.githubSyncedTasks(updated) : t.workspace.githubSynced)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : t.workspace.failedSyncGithub)
     } finally {
       setSyncingGithub(false)
+    }
+  }
+
+  const handleRepairWebhook = async (repoId: string) => {
+    setRepairingRepo(repoId)
+    try {
+      await post(`/api/github/${projectId}/repository/${repoId}/repair-webhook`, {})
+      toast.success(t.workspace.webhookRepaired)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t.workspace.failedRepairWebhook)
+    } finally {
+      setRepairingRepo(null)
     }
   }
 
@@ -361,12 +386,29 @@ export default function Workspace() {
     loadNotionTasks()
   }, [githubTab, projectId])
 
+  // Live task-sync updates: when a webhook advances or completes a linked task,
+  // the backend pushes 'taskSyncUpdate' — refresh the branch badges (and the
+  // Notion embed when a task just completed) without a manual Sync.
+  useEffect(() => {
+    if (!projectId) return
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+    const socket: Socket = io(apiBaseUrl)
+    socket.emit('joinProject', projectId)
+    socket.on('taskSyncUpdate', (payload: { syncState?: string }) => {
+      loadBranches()
+      if (payload?.syncState === 'DONE') setEmbedReloadKey((k) => k + 1)
+    })
+    return () => { socket.disconnect() }
+  }, [projectId])
+
   const openLinkModal = (branch: GitBranchInfo) => {
     setLinkBranch(branch)
     setLinkTaskId('')
     setLinkTargetBranch('main')
     setLinkCompletionProp('')
     setLinkCompletionValue('')
+    setLinkInProgressValue('')
+    setLinkRequireApproval(false)
     setProjectSchema(null)
   }
 
@@ -375,6 +417,7 @@ export default function Workspace() {
     setLinkTaskId(taskId)
     setLinkCompletionProp('')
     setLinkCompletionValue('')
+    setLinkInProgressValue('')
     setProjectSchema(null)
     if (!taskId) return
     const task = notionTasks.find((nt) => nt.notionPageId === taskId)
@@ -421,6 +464,11 @@ export default function Workspace() {
         completionPropertyName: linkCompletionProp,
         completionPropertyType: selectedProp.type,
         completionValue,
+        // In-progress sync only applies to status/select props with a chosen value.
+        ...(selectedProp.type !== 'checkbox' && linkInProgressValue
+          ? { inProgressValue: linkInProgressValue }
+          : {}),
+        requireApproval: linkRequireApproval,
       })
       toast.success(t.workspace.linked(task.title, linkBranch.name))
       setLinkBranch(null)
@@ -656,6 +704,30 @@ export default function Workspace() {
   const myMembership = project.members?.find((m) => m.user.email === user?.email)
   const isOwner = myMembership?.role === 'OWNER'
   const hasRepo = (project.repositories?.length ?? 0) > 0
+
+  // A meeting counts as "past" once its scheduled end (start + duration) has
+  // elapsed — so a freshly-started instant meeting stays under Upcomings until
+  // it actually wraps up, instead of jumping straight to Past.
+  const meetingStartTs = (m: Meeting) => {
+    const raw = m.startTime || m.start_time
+    return raw ? new Date(raw).getTime() : 0
+  }
+  const meetingEndTs = (m: Meeting) =>
+    meetingStartTs(m) + (m.duration ? m.duration * 60_000 : 0)
+
+  // Split by tab, then order each list "closest to today first": upcoming ascending
+  // (soonest next), past descending (most recently ended).
+  const now = Date.now()
+  const visibleMeetings = (() => {
+    if (zoomTab === 'past') {
+      return meetings
+        .filter((m) => meetingEndTs(m) < now)
+        .sort((a, b) => meetingStartTs(b) - meetingStartTs(a))
+    }
+    return meetings
+      .filter((m) => meetingEndTs(m) >= now)
+      .sort((a, b) => meetingStartTs(a) - meetingStartTs(b))
+  })()
 
   // Group members by role level for hierarchy display
   const levelLabel: Record<number, string> = { 0: 'Management', 1: 'Board', 2: 'Team Leads', 3: 'Members' }
@@ -1038,6 +1110,12 @@ export default function Workspace() {
                       Open <ExternalLink size={12} />
                     </a>
                   )}
+                  {embedSrc && (
+                    <button onClick={() => setEmbedReloadKey((k) => k + 1)}
+                      className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60" aria-label="Refresh Notion embed" title="Refresh">
+                      <RefreshCw size={15} />
+                    </button>
+                  )}
                   <button onClick={() => { setEditingEmbed((v) => !v); setEmbedDraft(notionEmbedUrl) }}
                     className="rounded-lg p-1.5 text-slate-500 hover:bg-white/60" aria-label="Edit embed">
                     <Pencil size={15} />
@@ -1063,7 +1141,8 @@ export default function Workspace() {
                     // Use iframe — works with official Notion /ebd/ embed URLs
                     <div className="relative h-full w-full">
                       <iframe
-                        src={embedSrc}
+                        key={embedReloadKey}
+                        src={embedReloadKey === 0 ? embedSrc : `${embedSrc}${embedSrc.includes('?') ? '&' : '?'}_r=${embedReloadKey}`}
                         title="Notion page"
                         className="h-full w-full"
                         allow="fullscreen"
@@ -1157,25 +1236,41 @@ export default function Workspace() {
                   </div>
 
                   <div className="max-h-[460px] space-y-3 overflow-y-auto pr-1">
-                    {meetings.length === 0 ? (
-                      <p className="py-8 text-center text-sm text-white/90">No meetings yet</p>
+                    {visibleMeetings.length === 0 ? (
+                      <p className="py-8 text-center text-sm text-white/90">
+                        {zoomTab === 'past' ? 'No past meetings yet' : 'No upcoming meetings'}
+                      </p>
                     ) : (
-                      meetings.map((meeting) => (
+                      visibleMeetings.map((meeting) => {
+                        const isPast = zoomTab === 'past'
+                        return (
                         <div key={meeting.id} className="relative overflow-hidden rounded-[9px]" style={{ minHeight: 96 }}>
-                          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,#527CDD 0%,#BCD0FF 100%)' }} />
+                          <div
+                            className="absolute inset-0"
+                            style={{ background: isPast ? 'linear-gradient(180deg,#8E9AAE 0%,#C7CDD8 100%)' : 'linear-gradient(180deg,#527CDD 0%,#BCD0FF 100%)' }}
+                          />
                           <div className="absolute bottom-0 right-0 top-0 rounded-r-[9px] bg-white" style={{ left: 9 }} />
                           <div className="relative z-10 p-4" style={{ marginLeft: 9 }}>
-                            <div className="flex items-start justify-between">
-                              <h3 className="text-base font-semibold text-slate-900/80">{meeting.topic}</h3>
-                              {meeting.isHost ? (
-                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
-                                  <Crown size={10} /> Host
-                                </span>
-                              ) : (
-                                <ChevronDown size={18} className="text-slate-900/70" />
-                              )}
+                            <div className="flex items-start justify-between gap-2">
+                              <h3 className={`text-base font-semibold ${isPast ? 'text-slate-600' : 'text-slate-900/80'}`}>{meeting.topic}</h3>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                {isPast ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                                    <History size={10} /> Ended
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                    <CalendarClock size={10} /> Upcoming
+                                  </span>
+                                )}
+                                {meeting.isHost && (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                                    <Crown size={10} /> Host
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <p className="mt-0.5 text-xs text-slate-900/50">
+                            <p className={`mt-0.5 text-xs ${isPast ? 'text-slate-500' : 'text-slate-900/50'}`}>
                               {new Date(meeting.startTime || meeting.start_time || Date.now()).toLocaleString()}
                             </p>
                             {meeting.organizerTeam && (
@@ -1188,24 +1283,35 @@ export default function Workspace() {
                             <div className="mt-3 flex items-center justify-between">
                               <button
                                 onClick={() => router.push(`/workspace/${projectId}/zoom/${meeting.id}`)}
-                                className="rounded-full border border-[#B18BB8] bg-white px-3 py-1 text-xs text-slate-900/60 hover:bg-[#B18BB8]/10"
+                                className={`rounded-full border bg-white px-3 py-1 text-xs ${isPast ? 'border-slate-300 text-slate-500 hover:bg-slate-100' : 'border-[#B18BB8] text-slate-900/60 hover:bg-[#B18BB8]/10'}`}
                               >
-                                Open in workspace
+                                {isPast ? 'View recording' : 'Open in workspace'}
                               </button>
-                              <button
-                                onClick={() => {
-                                  const url = meeting.joinUrl || meeting.join_url
-                                  if (url) window.open(url, '_blank')
-                                }}
-                                title="Open in Zoom app"
-                                className="rounded-lg p-1 transition-opacity hover:opacity-70"
-                              >
-                                <Video size={20} style={{ color: '#2D62DA' }} fill="#2D62DA" />
-                              </button>
+                              {isPast ? (
+                                <button
+                                  onClick={() => router.push(`/workspace/${projectId}/zoom/${meeting.id}`)}
+                                  title="View recording / transcript"
+                                  className="rounded-lg p-1 text-slate-500 transition-opacity hover:opacity-70"
+                                >
+                                  <PlayCircle size={20} />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    const url = meeting.joinUrl || meeting.join_url
+                                    if (url) window.open(url, '_blank')
+                                  }}
+                                  title="Open in Zoom app"
+                                  className="rounded-lg p-1 transition-opacity hover:opacity-70"
+                                >
+                                  <Video size={20} style={{ color: '#2D62DA' }} fill="#2D62DA" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
-                      ))
+                        )
+                      })
                     )}
                   </div>
                 </div>
@@ -1312,7 +1418,17 @@ export default function Workspace() {
                     ) : (
                       <div className="flex min-h-0 flex-1 flex-col">
                         {project.repositories!.map((r) => (
-                          <p key={r.id} className="font-geist-mono mb-2 shrink-0 text-xs font-normal text-green-400">✓ {r.githubOwner}/{r.githubRepo}</p>
+                          <div key={r.id} className="mb-2 flex shrink-0 items-center gap-2">
+                            <p className="font-geist-mono truncate text-xs font-normal text-green-400">✓ {r.githubOwner}/{r.githubRepo}</p>
+                            <button
+                              onClick={() => handleRepairWebhook(r.id)}
+                              disabled={repairingRepo === r.id}
+                              title="Re-create the GitHub webhook for this repo (needed if real-time sync isn't working)"
+                              className="font-geist-mono ml-auto inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-normal text-white/50 hover:bg-white/10 hover:text-white/80 disabled:opacity-50"
+                            >
+                              <RefreshCw size={10} className={repairingRepo === r.id ? 'animate-spin' : ''} /> {t.workspace.repairWebhook}
+                            </button>
+                          </div>
                         ))}
                         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto">
                           {githubTab === 'activity' ? (
@@ -1547,7 +1663,7 @@ export default function Workspace() {
     {/* Link Task to Branch Modal */}
     {linkBranch && (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
           <div className="mb-5 flex items-center justify-between">
             <h3 className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <GitBranch size={18} className="text-primary" /> Link Task to Branch
@@ -1563,9 +1679,9 @@ export default function Workspace() {
           <div className="space-y-4">
             {/* How it flows: GitHub action drives the Notion task, never the reverse */}
             <div className="rounded-xl border border-primary/20 bg-primary/5 px-3 py-2.5 text-xs leading-relaxed text-slate-600">
-              When this branch&apos;s PR is merged into the target branch (and approved),
-              Orchestra will update the Notion task for you — setting the property below to
-              the chosen value. The GitHub merge is the trigger; Notion is updated as a result.
+              When this branch&apos;s PR is merged into the target branch, Orchestra updates the
+              Notion task for you — setting the property below to the chosen value. Optionally,
+              it can also mark the task in-progress on the first commit. GitHub drives Notion, never the reverse.
             </div>
 
             {/* Branch (fixed) */}
@@ -1633,6 +1749,7 @@ export default function Workspace() {
                   onChange={(e) => {
                     setLinkCompletionProp(e.target.value)
                     setLinkCompletionValue('')
+                    setLinkInProgressValue('')
                   }}
                   className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
                 >
@@ -1674,6 +1791,44 @@ export default function Workspace() {
                 )}
               </div>
             )}
+
+            {/* In-progress value — optional, status/select only. When set, the task
+                moves to this value as soon as the first commit lands on the branch. */}
+            {selectedProp && selectedProp.type !== 'checkbox' && (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Set value to (when work starts) <span className="font-normal text-slate-400">· optional</span>
+                </label>
+                <select
+                  value={linkInProgressValue}
+                  onChange={(e) => setLinkInProgressValue(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                >
+                  <option value="">Don&apos;t update until done</option>
+                  {(selectedProp.options ?? []).map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  Applied on the first commit pushed to this branch (or now, if it already has commits).
+                </p>
+              </div>
+            )}
+
+            {/* Require approval — opt-in review gate before a merge completes the task */}
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={linkRequireApproval}
+                onChange={(e) => setLinkRequireApproval(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-primary focus:ring-primary"
+              />
+              <span className="text-xs leading-relaxed text-slate-600">
+                <span className="font-medium text-slate-700">Require an approving review to complete</span>
+                <br />
+                Off: any merge into the target branch marks the task done. On: the PR must have an approving GitHub review first.
+              </span>
+            </label>
           </div>
 
           <div className="mt-6 flex gap-3">

@@ -3,7 +3,7 @@
 import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { Send, MessageSquare, ChevronRight, Hash, Shield, Users, Lock } from 'lucide-react'
+import { Send, MessageSquare, ChevronRight, Hash, Shield, Users, Lock, Pin, PinOff, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/app/components/ui/button'
 import { get, post } from '@/app/lib/api'
@@ -16,6 +16,7 @@ interface ChatMessage {
   senderName?: string
   content: string
   createdAt: string
+  pinnedAt?: string | null
 }
 
 interface Channel {
@@ -66,6 +67,7 @@ export default function ProjectChat() {
   const [loading, setLoading] = useState(true)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [sending, setSending] = useState(false)
+  const [pinnedOpen, setPinnedOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -132,6 +134,42 @@ export default function ProjectChat() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
+    }
+  }
+
+  // Pin / unpin — optimistic, reverts on failure. Pins are shared across the channel.
+  const handleTogglePin = async (messageId: string) => {
+    const target = messages.find((m) => m.id === messageId)
+    if (!target) return
+    const willPin = !target.pinnedAt
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, pinnedAt: willPin ? new Date().toISOString() : null } : m)),
+    )
+    try {
+      await post(`/projects/${projectId}/channels/${activeChannelId}/messages/${messageId}/pin`, {})
+    } catch (e) {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === messageId ? { ...m, pinnedAt: target.pinnedAt ?? null } : m)),
+      )
+      toast.error(e instanceof Error ? e.message : t.chat.failedPin)
+    }
+  }
+
+  // Pinned messages, newest pin first.
+  const pinnedMessages = useMemo(
+    () =>
+      messages
+        .filter((m) => m.pinnedAt)
+        .sort((a, b) => new Date(b.pinnedAt as string).getTime() - new Date(a.pinnedAt as string).getTime()),
+    [messages],
+  )
+
+  const jumpToMessage = (id: string) => {
+    const el = document.getElementById(`msg-${id}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.classList.add('ring-2', 'ring-primary/50')
+      setTimeout(() => el.classList.remove('ring-2', 'ring-primary/50'), 1600)
     }
   }
 
@@ -259,8 +297,53 @@ export default function ProjectChat() {
           )}
         </header>
 
+        {/* Pinned messages bar */}
+        {pinnedMessages.length > 0 && (
+          <div className="shrink-0 border-b border-amber-200/60 bg-amber-50/70 backdrop-blur">
+            <div className="mx-auto max-w-3xl px-6 py-2.5">
+              <button
+                onClick={() => setPinnedOpen((v) => !v)}
+                className="flex w-full items-center gap-2 text-left text-[11px] font-bold uppercase tracking-wider text-amber-700"
+              >
+                <Pin size={12} className="fill-amber-500 text-amber-500" />
+                {pinnedMessages.length} {t.chat.pinned}
+                <ChevronRight size={13} className={`ml-auto transition-transform ${pinnedOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {pinnedOpen && (
+                <div className="mt-2 space-y-1.5">
+                  {pinnedMessages.map((m) => (
+                    <div
+                      key={m.id}
+                      className="group/pin flex items-center gap-2 rounded-lg border border-amber-200/70 bg-white/80 px-3 py-1.5"
+                    >
+                      <button onClick={() => jumpToMessage(m.id)} className="min-w-0 flex-1 text-left">
+                        <span className="text-[10px] font-bold text-amber-700">{m.senderId === user?.id ? t.chat.you : m.senderName || t.chat.member}</span>
+                        <p className="truncate text-xs text-slate-600">{m.content}</p>
+                      </button>
+                      <button
+                        onClick={() => handleTogglePin(m.id)}
+                        title={t.chat.unpin}
+                        className="shrink-0 rounded-md p-1 text-amber-600 opacity-0 transition-opacity hover:bg-amber-100 group-hover/pin:opacity-100"
+                      >
+                        <PinOff size={13} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-6">
+        <div
+          className="flex-1 overflow-y-auto px-6 py-6"
+          style={{
+            backgroundImage:
+              'radial-gradient(circle at 1px 1px, rgba(109,40,217,0.06) 1px, transparent 0)',
+            backgroundSize: '22px 22px',
+          }}
+        >
           <div className="mx-auto max-w-3xl">
             {loadingMessages ? (
               <div className="py-20 text-center text-sm text-muted-foreground">{t.chat.loadingChat}</div>
@@ -290,8 +373,9 @@ export default function ProjectChat() {
                       const m = item.message
                       const isOwn = m.senderId === user?.id
                       const showHeader = item.showHeader
+                      const isPinned = !!m.pinnedAt
                       return (
-                        <div key={m.id} className={`flex gap-3 ${isOwn ? 'flex-row-reverse' : ''} ${showHeader ? 'mt-4' : 'mt-0.5'}`}>
+                        <div id={`msg-${m.id}`} key={m.id} className={`group flex gap-3 rounded-xl transition-shadow ${isOwn ? 'flex-row-reverse' : ''} ${showHeader ? 'mt-4' : 'mt-0.5'}`}>
                           <div className="w-9 shrink-0">
                             {showHeader && !isOwn && (
                               <div className="flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-bold text-white"
@@ -310,14 +394,30 @@ export default function ProjectChat() {
                                 </span>
                               </div>
                             )}
-                            <div
-                              className={`whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
-                                isOwn
-                                  ? 'brand-gradient rounded-tr-sm text-white'
-                                  : 'rounded-tl-sm border border-border bg-card text-foreground'
-                              }`}
-                            >
-                              {m.content}
+                            <div className={`flex items-center gap-1.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
+                              <div
+                                className={`relative whitespace-pre-wrap break-words rounded-2xl px-4 py-2.5 text-sm shadow-sm ${
+                                  isOwn
+                                    ? 'brand-gradient rounded-tr-sm text-white'
+                                    : 'rounded-tl-sm border border-border bg-card text-foreground'
+                                } ${isPinned ? 'ring-1 ring-amber-300' : ''}`}
+                              >
+                                {isPinned && (
+                                  <Pin
+                                    size={11}
+                                    className={`absolute -top-1.5 ${isOwn ? '-left-1.5' : '-right-1.5'} rotate-12 fill-amber-400 text-amber-500`}
+                                  />
+                                )}
+                                {m.content}
+                              </div>
+                              {/* Hover pin toggle */}
+                              <button
+                                onClick={() => handleTogglePin(m.id)}
+                                title={isPinned ? t.chat.unpin : t.chat.pin}
+                                className="shrink-0 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-amber-600 group-hover:opacity-100"
+                              >
+                                {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+                              </button>
                             </div>
                           </div>
                         </div>

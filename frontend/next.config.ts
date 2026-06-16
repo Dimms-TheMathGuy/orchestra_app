@@ -1,54 +1,23 @@
 import type { NextConfig } from "next";
 
+// Backend origin: set NEXT_PUBLIC_API_URL in production (e.g. https://api.orchestra.app).
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
 const nextConfig: NextConfig = {
   typescript: {
     // Exclude NEW FRONTEND folder from type checking
     tsconfigPath: './tsconfig.json',
   },
   async rewrites() {
+    const proxied = [
+      'auth', 'api', 'projects', 'users', 'meetings',
+      'summaries', 'gemini', 'zoom', 'notion', 'github',
+    ];
     return {
-      beforeFiles: [
-        {
-          source: '/auth/:path*',
-          destination: 'http://localhost:3000/auth/:path*',
-        },
-        {
-          source: '/api/:path*',
-          destination: 'http://localhost:3000/api/:path*',
-        },
-        {
-          source: '/projects/:path*',
-          destination: 'http://localhost:3000/projects/:path*',
-        },
-        {
-          source: '/users/:path*',
-          destination: 'http://localhost:3000/users/:path*',
-        },
-        {
-          source: '/meetings/:path*',
-          destination: 'http://localhost:3000/meetings/:path*',
-        },
-        {
-          source: '/summaries/:path*',
-          destination: 'http://localhost:3000/summaries/:path*',
-        },
-        {
-          source: '/gemini/:path*',
-          destination: 'http://localhost:3000/gemini/:path*',
-        },
-        {
-          source: '/zoom/:path*',
-          destination: 'http://localhost:3000/zoom/:path*',
-        },
-        {
-          source: '/notion/:path*',
-          destination: 'http://localhost:3000/notion/:path*',
-        },
-        {
-          source: '/github/:path*',
-          destination: 'http://localhost:3000/github/:path*',
-        },
-      ],
+      beforeFiles: proxied.map((p) => ({
+        source: `/${p}/:path*`,
+        destination: `${API_URL}/${p}/:path*`,
+      })),
     }
   },
 };

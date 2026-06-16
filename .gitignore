@@ -137,3 +137,17 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# AI artifacts & session notes
+ARTIFACTS/
+Codex notes
+schema_diff.txt
+task.md
+
+# Non-README markdown files
+*.md
+!README.md
+!**/README.md
+
+# Old frontend prototype
+frontend/NEW FRONTEND/
